@@ -1,3 +1,4 @@
+<a name="xhs-rl-paper-share"></a>
 <div align="right">
   <a href="README_ZH.md">中文文档</a>
 </div>
@@ -43,13 +44,17 @@
 
 ## 📦 Installation
 
+> **Prerequisites**: Python 3.8+ · a Xiaohongshu Creator account
+
 ```bash
 git clone https://github.com/GetIT-Sunday/xhs-rl-paper-share.git
 cd xhs-rl-paper-share
 pip install xhs xhshow PyMuPDF requests arxiv
 ```
 
-### Dependencies
+<details>
+<summary><strong>📋 Dependency details</strong></summary>
+<br>
 
 | Package | Purpose |
 |---|---|
@@ -59,38 +64,44 @@ pip install xhs xhshow PyMuPDF requests arxiv
 | `requests` | HTTP requests |
 | `arxiv` | arXiv paper metadata |
 
+</details>
+
+<div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
+
 ---
 
 ## 🚀 Usage
 
-### 1. Get Xiaohongshu Cookie
+The full pipeline is 4 required steps + 2 optional steps:
+
+**① Get Xiaohongshu Cookie**
 
 Log in to [XHS Creator Center](https://creator.xiaohongshu.com), open DevTools → Application → Cookies → `creator.xiaohongshu.com`, copy `a1`, `web_session`, `webId`.
 
 > ⚠️ **Must use Creator Center cookies** — consumer-side (`www.xiaohongshu.com`) cookies cannot call publishing APIs.
 
-### 2. Fetch Papers
+**② Fetch Papers**
 
 ```bash
 python3 scripts/fetch_papers.py --count 5
 # Output → references/fetched_papers.json
 ```
 
-### 3. Generate Content
+**③ Generate Content**
 
 ```bash
 python3 scripts/generate_content.py --arxiv-id 2606.24014
 # Output → references/content_2606_24014.json
 ```
 
-### 4. Capture Cover
+**④ Capture Cover**
 
 ```bash
 python3 scripts/capture_cover.py --arxiv-id 2606.24014
 # Saves arXiv first-page screenshot → assets/covers/
 ```
 
-### 5. Publish
+**⑤ Publish**
 
 ```bash
 # Private preview (recommended first)
@@ -105,44 +116,79 @@ python3 scripts/publish_to_xhs.py \
   --cookie 'a1=xxx;web_session=xxx;webId=xxx'
 ```
 
-### 6. Scheduled Publishing (Optional)
+<details>
+<summary><strong>⑥ Scheduled Publishing (optional) — click to expand</strong></summary>
+<br>
 
 ```bash
 # cron: daily at 10:00
 0 10 * * * cd /path/to/repo && XHS_COOKIE='a1=xxx;...' python3 scripts/scheduled_publish.py
 ```
 
+</details>
+
+<div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
+
 ---
 
 ## 🛠️ Commands
 
-| Script | Command | Description |
-|---|---|---|
-| `fetch_papers.py` | `python3 scripts/fetch_papers.py --count N` | Fetch N papers from arXiv |
-| `generate_content.py` | `python3 scripts/generate_content.py --arxiv-id <ID>` | Generate XHS copy |
-| `capture_cover.py` | `python3 scripts/capture_cover.py --arxiv-id <ID>` | Extract PDF first page as cover |
-| `publish_to_xhs.py` | `python3 scripts/publish_to_xhs.py --content-json <f> --cookie <c>` | Publish note |
-| `scheduled_publish.py` | `XHS_COOKIE='...' python3 scripts/scheduled_publish.py` | Full pipeline entry point |
+<table>
+<tr><th>Script</th><th>Command</th><th>Description</th></tr>
+<tr><td><code>fetch_papers.py</code></td><td><code>python3 scripts/fetch_papers.py --count N</code></td><td>Fetch N papers from arXiv</td></tr>
+<tr><td><code>generate_content.py</code></td><td><code>python3 scripts/generate_content.py --arxiv-id &lt;ID&gt;</code></td><td>Generate XHS copy</td></tr>
+<tr><td><code>capture_cover.py</code></td><td><code>python3 scripts/capture_cover.py --arxiv-id &lt;ID&gt;</code></td><td>Extract PDF first page as cover</td></tr>
+<tr><td><code>publish_to_xhs.py</code></td><td><code>python3 scripts/publish_to_xhs.py --content-json &lt;f&gt; --cookie &lt;c&gt;</code></td><td>Publish note</td></tr>
+<tr><td><code>scheduled_publish.py</code></td><td><code>XHS_COOKIE='...' python3 scripts/scheduled_publish.py</code></td><td>Full pipeline entry point</td></tr>
+</table>
+
+<div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
 
 ---
 
 ## ⚙️ Configuration
 
-Set cookie via environment variable to avoid shell history exposure:
+> 🔒 Set cookie via environment variable to avoid shell history exposure
 
 ```bash
 export XHS_COOKIE='a1=xxx;web_session=xxx;webId=xxx'
 python3 scripts/publish_to_xhs.py --content-json references/content_2606_24014.json
 ```
 
+<div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
+
 ---
 
 ## 🌿 Branches
 
-| Branch | Description |
-|---|---|
-| `main` | **General** — pure Python, standard PyPI deps, runs anywhere |
-| `dodo` | **dodo Integration** — adds dodo AI Agent Skill protocol, GPT Image cover generation, arxiv-paper-reader reports |
+<table>
+<tr>
+<th width="50%">🌍 <code>main</code> — General</th>
+<th width="50%">🤖 <code>dodo</code> — dodo Integration</th>
+</tr>
+<tr>
+<td valign="top">
+
+Pure Python, standard PyPI dependencies only. Runs anywhere.
+
+- ✅ Zero platform lock-in
+- ✅ Works in any Python 3.8+ environment
+- ✅ Minimal dependency surface
+
+</td>
+<td valign="top">
+
+Everything in `main`, plus dodo AI Agent platform integration.
+
+- ✅ dodo Skill protocol (`SKILL.md`)
+- ✅ GPT Image cover generation
+- ✅ `arxiv-paper-reader` deep-read reports
+
+</td>
+</tr>
+</table>
+
+<div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
 
 ---
 
@@ -170,28 +216,75 @@ xhs-rl-paper-share/
 └── README_ZH.md               # 中文文档
 ```
 
+<div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
+
 ---
 
 ## ⚠️ Notes
 
-- **Cookie Security**: `web_session` is a login credential — never commit it to version control
-- **Publish Frequency**: Recommend ≤ 3 posts/day to avoid XHS rate limiting
-- **Cookie Expiry**: Creator Center cookies expire in ~30 days
-- **Signing**: `xhs` built-in signing is flagged by XHS; this project monkey-patches to `xhshow` real-time signing
+<details open>
+<summary><strong>🔒 Cookie Security</strong></summary>
+<br>
+
+`web_session` is a login credential — never commit it to version control.
+
+</details>
+
+<details>
+<summary><strong>📊 Publish Frequency</strong></summary>
+<br>
+
+Recommend ≤ 3 posts/day to avoid XHS rate limiting.
+
+</details>
+
+<details>
+<summary><strong>⏰ Cookie Expiry</strong></summary>
+<br>
+
+Creator Center cookies expire in ~30 days.
+
+</details>
+
+<details>
+<summary><strong>✍️ Signing</strong></summary>
+<br>
+
+`xhs`'s built-in signing algorithm is flagged by XHS risk control; this project monkey-patches it to `xhshow` real-time signing.
+
+</details>
+
+<div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
 
 ---
 
 ## 🤝 Contributing
 
-Contributions welcome! Feel free to open issues or pull requests.
+Contributions are what make the open-source community such an amazing place to learn and create. Any contribution you make is greatly appreciated!
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+Don't forget to give the project a ⭐ if you find it useful!
+
+<div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
 
 ---
 
 ## 📄 License
 
-MIT
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+<div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
 
 ---
+
+<p align="center">
+  <sub>If this project saved you time, consider giving it a ⭐ — it helps others discover it too.</sub>
+</p>
 
 <p align="center">
   <a href="https://star-history.com/#GetIT-Sunday/xhs-rl-paper-share&Date">
