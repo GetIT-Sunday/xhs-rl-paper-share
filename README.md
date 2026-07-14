@@ -3,18 +3,16 @@
 </div>
 
 <p align="center">
-  <h1 align="center">xhs-rl-paper-share</h1>
-  <p align="center">
-    <strong>Auto-publish arXiv RL papers to Xiaohongshu / 自动将 arXiv 强化学习论文发布到小红书</strong>
-  </p>
-  <p align="center">
-    <a href="#-features">Features</a> •
-    <a href="#-installation">Installation</a> •
-    <a href="#-usage">Usage</a> •
-    <a href="#%EF%B8%8F-commands">Commands</a> •
-    <a href="#%EF%B8%8F-configuration">Configuration</a> •
-    <a href="#-branches">Branches</a>
-  </p>
+  <img src="assets/banner.png" alt="xhs-rl-paper-share banner" width="100%">
+</p>
+
+<p align="center">
+  <a href="#-features">Features</a> •
+  <a href="#-installation">Installation</a> •
+  <a href="#-usage">Usage</a> •
+  <a href="#%EF%B8%8F-commands">Commands</a> •
+  <a href="#%EF%B8%8F-configuration">Configuration</a> •
+  <a href="#-branches">Branches</a>
 </p>
 
 <p align="center">
@@ -28,6 +26,10 @@
 ---
 
 ## ✨ Features
+
+> **Demo** — arXiv paper (left) → XHS published note (right)
+>
+> <img src="assets/demo_screenshot.png" alt="Demo: arXiv paper to Xiaohongshu post" width="100%">
 
 | Feature | Description |
 |---|---|
@@ -188,3 +190,11 @@ Contributions welcome! Feel free to open issues or pull requests.
 ## 📄 License
 
 MIT
+
+---
+
+<p align="center">
+  <a href="https://star-history.com/#GetIT-Sunday/xhs-rl-paper-share&Date">
+    <img src="https://api.star-history.com/svg?repos=GetIT-Sunday/xhs-rl-paper-share&type=Date" alt="Star History Chart" width="600">
+  </a>
+</p>
