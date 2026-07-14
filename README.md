@@ -119,3 +119,22 @@ xhs-rl-paper-share/
 ## License
 
 MIT
+
+---
+
+## dodo 集成版（`dodo` 分支）
+
+`dodo` 分支在通用版基础上增加：
+
+- **SKILL.md**：dodo AI Agent 平台 Skill 协议入口，支持通过自然语言触发发布流程
+- **GPT Image 封面**：`capture_cover.py --gpt-cover` 调用 dodo 平台的 `gpt-image` skill 进行图生图二次创作
+- **论文精读报告**：发布完成后自动触发 `arxiv-paper-reader` skill 生成深度解读报告
+- **dodo 定时任务集成**：通过 `scheduled-task-manager` skill 管理跨会话定时任务（不依赖本地 cron）
+
+### 在 dodo 中使用
+
+安装 skill 后，对话中直接说：
+
+> "帮我发一篇 RL 论文到小红书"
+> "分享 arXiv:2606.24014 这篇论文"
+> "每天 10 点自动发一篇 RL 论文"
