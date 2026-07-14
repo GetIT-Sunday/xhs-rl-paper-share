@@ -3,18 +3,16 @@
 </div>
 
 <p align="center">
-  <h1 align="center">xhs-rl-paper-share</h1>
-  <p align="center">
-    <strong>自动将 arXiv 强化学习论文发布到小红书</strong>
-  </p>
-  <p align="center">
-    <a href="#-功能特性">功能特性</a> •
-    <a href="#-安装">安装</a> •
-    <a href="#-使用方法">使用方法</a> •
-    <a href="#%EF%B8%8F-命令">命令</a> •
-    <a href="#%EF%B8%8F-配置">配置</a> •
-    <a href="#-分支说明">分支说明</a>
-  </p>
+  <img src="assets/banner.png" alt="xhs-rl-paper-share banner" width="100%">
+</p>
+
+<p align="center">
+  <a href="#-功能特性">功能特性</a> •
+  <a href="#-安装">安装</a> •
+  <a href="#-使用方法">使用方法</a> •
+  <a href="#%EF%B8%8F-命令">命令</a> •
+  <a href="#%EF%B8%8F-配置">配置</a> •
+  <a href="#-分支说明">分支说明</a>
 </p>
 
 <p align="center">
@@ -28,6 +26,10 @@
 ---
 
 ## ✨ 功能特性
+
+> **效果演示** — arXiv 论文首页（左）→ 小红书发布笔记（右）
+>
+> <img src="assets/demo_screenshot.png" alt="效果演示：arXiv 论文发布到小红书" width="100%">
 
 | 功能 | 说明 |
 |---|---|
@@ -188,3 +190,11 @@ xhs-rl-paper-share/
 ## 📄 许可证
 
 MIT
+
+---
+
+<p align="center">
+  <a href="https://star-history.com/#GetIT-Sunday/xhs-rl-paper-share&Date">
+    <img src="https://api.star-history.com/svg?repos=GetIT-Sunday/xhs-rl-paper-share&type=Date" alt="Star History Chart" width="600">
+  </a>
+</p>
