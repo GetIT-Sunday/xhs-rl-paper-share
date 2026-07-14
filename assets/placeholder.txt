@@ -1,0 +1,1 @@
+This placeholder marks the assets directory. Replace with actual files or delete.

@@ -1,0 +1,40 @@
+# Cookie & credentials — NEVER commit
+.xhs_cookie_cache.json
+*.cookie
+*.token
+.env
+.env.*
+
+# Generated cover images (runtime artifacts)
+assets/covers/*.png
+assets/covers/*.jpg
+assets/covers/*.jpeg
+assets/covers/*.pdf
+# Keep placeholder
+!assets/covers/.gitkeep
+
+# Temp & intermediate files in covers dir
+assets/covers/tmp*
+
+# Publish result snapshots (contain note IDs etc.)
+references/result_*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

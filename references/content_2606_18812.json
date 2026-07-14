@@ -1,0 +1,19 @@
+{
+  "arxiv_id": "2606.18812",
+  "original_title": "Reinforcement Learning Foundation Models Should Already Be A Thing",
+  "abstract": "Foundation models for language and vision are powered by internet-scale data. We argue RL is the conspicuous gap: sampling a synthetic MDP is feasible yet no work treats prior design as a primary objective. We train a GAT on synthetic MDPs and show it solves held-out tabular benchmarks in context.",
+  "categories": [
+    "cs.LG",
+    "cs.AI"
+  ],
+  "xhs_title": "RL 基础模型，早该有了！这篇论文说出了大家的心声",
+  "xhs_content": "最近挖到一篇很有意思的 RL 新论文，论点直接写在标题里——\n\n📕《Reinforcement Learning Foundation Models Should Already Be A Thing》\n\n语言模型、视觉模型都有 Foundation Model 了，**为什么强化学习还没有？**\n\n这篇论文给出了一个很清晰的分析：\n\n📗 **Gap 在哪里？**\nNLP 靠互联网数据，表格任务靠合成数据（TabPFN），而 RL 呢——其实采样一个合成 MDP 和采样一个合成表格数据集一样容易，但一直没有人把\"先验设计\"当成 RL 预训练的核心目标来做。\n\n📘 **他们怎么做的？**\n发现 MDP 存在一个**固定大小的充分统计量**，形状上就是一张表格——这意味着专为表格数据设计的注意力架构可以直接复用！于是他们用 Graph Attention Network 完全在**合成 MDP** 上训练，不做任何任务级微调，直接在 held-out 的 benchmark 上做 in-context 推理。\n\n📙 **效果如何？**\n- Online 场景：比 UCB-VI 和 tabular Q-learning **少得多的 episode** 就能收敛\n- Offline 场景：与 VI-LCB 持平，zero-shot！\n\n这个思路本质上是把 RL 问题\"表格化\"，借上了表格基础模型的东风，相当于给 RL 找到了一条少走弯路的预训练新路。\n\n你觉得 RL Foundation Model 这个方向能跑通吗？评论区聊聊～\n\n#机器学习 #强化学习 #基础模型 #文献阅读 #具身智能 #AI前沿",
+  "tags": [
+    "机器学习",
+    "强化学习",
+    "基础模型",
+    "文献阅读",
+    "具身智能",
+    "AI前沿"
+  ]
+}
