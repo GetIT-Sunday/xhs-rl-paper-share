@@ -1,0 +1,9 @@
+{
+  "xhs_title": "RL 还能这样用？训练 AI「向善」，对齐泛化效果炸裂！",
+  "xhs_content": "RL 还能这样用？训练 AI「向善」，对齐泛化效果炸裂！\n\n从最新 arXiv 论文里挖到一篇超有意思的研究，强化学习玩出了新花样——\n\n📕《Reinforcement Learning Towards Broadly and Persistently Beneficial Models》\n（OpenAI，2026年6月）\n\n**核心问题**：AI 在训练任务上对齐了，但换个场景会不会「跑偏」？\n\n📗 研究思路非常清晰：\n• 构建覆盖「健康、科学、教育」多领域的真实场景数据集\n• 用 RL 专门强化 truthfulness（诚实）、fairness（公平）、risk awareness（风险意识）、corrigibility（可纠正性）等「有益特质」\n• 然后在 50+ 个独立 benchmark 上测试分布外泛化能力\n\n📘 结果相当亮眼：\n• 对比等算力 baseline，**80%+ 的 out-of-distribution 基准上表现提升**\n• 更惊人的是——只在「健康领域」做了 RL 干预，在**非健康类**对齐评测上也全面提升！\n• 还发现 RL 训练能提升模型对**对抗性提示和有害微调**的抵抗力\n\n简单说：用 RL 训 AI 做好事，不只是这件好事变好，**整个人都变好了**！这对大模型对齐研究是个很积极的信号。\n\n你觉得这条路能走多远？越来越多的工作在用 RL 搞对齐，感觉是个很值得关注的方向～评论区聊聊！\n\n#机器学习 #强化学习 #大模型对齐 #AI安全 #文献阅读 #具身智能",
+  "arxiv_id": "2606.24014",
+  "original_title": "Reinforcement Learning Towards Broadly and Persistently Beneficial Models",
+  "abstract": "As AI systems are deployed across increasingly diverse and high-stakes settings, model alignment must generalize beyond the tasks and domains seen during training. We study whether RL on beneficial behavior can produce broad and persistent alignment generalization beyond the training distribution. Beneficial trait RL improves performance on over 80% of out-of-distribution benchmarks.",
+  "categories": ["cs.AI", "cs.LG"],
+  "generated_at": "2026-07-06T19:30:00"
+}

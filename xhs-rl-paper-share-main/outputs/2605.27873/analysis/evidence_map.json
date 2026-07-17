@@ -1,0 +1,10 @@
+{
+  "problem": {"claim": "自动建模智能体的瓶颈不只是推理能力，而是可用工程知识静态、嘈杂或无法积累。", "explanation": "参数知识会过时，临时搜索不稳定，固定语料库不能吸收新资料与历史实验经验。", "source_pages": [1, 2]},
+  "mechanism": {"claim": "AIBuildAI-2 用 L1 高层技能索引和 L2 细粒度文档构成两级知识系统。", "explanation": "约 30 个 L1 类别负责导航，约 1000 份 L2 文档提供具体配方；Agent 只在当前决策需要时逐级加载。", "source_pages": [2, 3, 11]},
+  "equation": {"claim": "知识访问可写为 query(k)=L1[k] 与 query(k,j)=L2[k][j]。", "explanation": "先读取类别指南和文档目录，若高层知识不足，再按描述选取具体文档；它改变的是上下文中的信息流，而非模型参数。", "source_pages": [11]},
+  "component_interaction": {"claim": "Manager 管理七条候选路线，Designer、Coder、Tuner 反复迭代，Aggregator 选择或融合最强方案。", "explanation": "知识系统服务于每一步决策；运行结束后 L2 Builder 提炼轨迹，L1 Builder再更新高层指南，形成执行到记忆的闭环。", "source_pages": [3, 10, 12]},
+  "main_result": {"claim": "AIBuildAI-2 在 MLE-Bench 的 75 项任务上取得 70.7% 奖牌率。", "explanation": "高、中、低难度组分别为 46.67%、73.68%、81.82%，论文报告三个分组均排名第一。", "source_pages": [4, 5]},
+  "ablation": {"claim": "论文没有报告关闭 L1、L2、动态加载或经验写回的组件消融。", "explanation": "心脏病与 ADMET 实验采用同底模、同时间和硬件预算比较完整系统与两种知识机制较弱的基线，但系统架构同时变化，只能支持整体系统有效，不能分离各组件贡献。", "source_pages": [6, 7, 12]},
+  "limitation": {"claim": "知识在进化，但 Agent harness 保持固定，长期自进化收益也缺少纵向验证。", "explanation": "作者明确承认 prompts、Agent 行为代码和编排不更新；论文也未给出随任务数量增长的迁移曲线、知识污染测试或多次随机运行方差。", "source_pages": [8, 12]},
+  "transferable_insight": {"claim": "可迁移的设计不是无限扩充上下文，而是把经验压缩成分层、可寻址、可审计的技能资产。", "explanation": "目录常驻、正文按需加载、任务后离线提炼，能同时控制上下文成本与知识复用；生产系统还应加入来源、版本、冲突检测与回滚。", "source_pages": [3, 8, 11, 12]}
+}

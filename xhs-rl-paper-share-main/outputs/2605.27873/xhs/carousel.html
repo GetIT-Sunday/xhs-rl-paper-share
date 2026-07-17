@@ -1,0 +1,79 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+    *{box-sizing:border-box} body{margin:0;background:#e9edf3;font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;color:#172033}
+    .slide{width:1080px;height:1440px;background:#fff;padding:70px 78px 54px;position:relative;overflow:hidden;page-break-after:always}
+    .topline{display:flex;justify-content:space-between;color:#8a94a6;font-size:18px;font-weight:700;letter-spacing:1.8px;border-bottom:2px solid #edf1f7;padding-bottom:16px}
+    h1{font-size:48px;line-height:1.17;margin:30px 0 18px;letter-spacing:-1px;color:#101827}
+    .lead{font-size:25px;line-height:1.62;margin:0 0 24px;color:#465066}
+    .paper-visual{margin:18px 0 24px;border:1px solid #dce3ee;border-radius:16px;background:#f9fbfe;padding:14px;box-shadow:0 10px 30px rgba(34,67,120,.08)}
+    .paper-visual img{display:block;width:100%;height:235px;object-fit:contain;background:white;border-radius:8px}
+    .paper-visual.hero img{height:350px} .paper-visual figcaption{font-size:16px;color:#8a94a6;text-align:right;margin-top:8px}
+    .sections{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+    section h2{font-size:26px;line-height:1.35;color:#1261d6;margin:0 0 8px}
+    section .body{font-size:21px;line-height:1.62;color:#28344a}
+    aside{position:absolute;left:78px;right:78px;bottom:54px;display:flex;gap:16px;background:linear-gradient(135deg,#eef5ff,#f7faff);border:1px solid #d9e7ff;border-radius:14px;padding:18px 22px;font-size:20px;line-height:1.5;color:#34435c}
+    aside span{font-size:30px} aside strong{color:#174d9f;font-size:21px}
+    </style></head><body>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>1/8</span></div>
+          <h1>自动建模缺的不是代码</h1>
+          <p class="lead">论文的判断是：Agent 已经会设计、编码和调参，但真正拉开方案质量的，是可调用、可积累的 ML 工程经验。</p>
+          <figure class="paper-visual compact"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_01_source.png"><figcaption>论文原图 · 第 1 页</figcaption></figure>
+          <div class="sections"><section><h2>三种知识都不够</h2><div class="body">参数知识静态且可能过时；即时网页搜索噪声高、查询不稳定；固定文档库更可靠，却无法吸收新方法和历史运行经验。因此失败点不是单次不会回答，而是跨决策、跨任务没有稳定知识供应。</div></section><section><h2>论文的核心命题</h2><div class="body">AIBuildAI-2 把外部知识接入设计、实现、调参与集成的每一步，并在任务结束后把执行轨迹重新写回知识库。作者希望把一次性搜索，改造成持续维护的工程记忆。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>编辑判断：这是一篇知识基础设施论文，而不是新模型架构论文。</div></aside>
+        </article>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>2/8</span></div>
+          <h1>多智能体如何搜索方案？</h1>
+          <p class="lead">Manager 维护并行实验路线，再根据训练反馈决定下一步。</p>
+          <figure class="paper-visual hero"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_02_source.png"><figcaption>论文原图 · 第 3 页</figcaption></figure>
+          <div class="sections"><section><h2>角色不是简单流水线</h2><div class="body">Setup 准备环境，Designer 提方案，Coder 实现排错，Tuner 从日志调参，Aggregator 融合结果。Manager 可反复召回任一角色，因此实验失败会改变后续搜索方向。</div></section><section><h2>七个候选仓库</h2><div class="body">每个任务初始化 7 个仓库，分别保存设计、代码、日志和验证分数。Manager 延长强路线、淘汰弱配置，把 24 小时预算集中到更有希望的方案。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>因为路线状态彼此隔离，系统能保留多样性，也能让最终集成利用不同误差模式。</div></aside>
+        </article>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>3/8</span></div>
+          <h1>两层知识库解决什么？</h1>
+          <p class="lead">1000 份文档不是全部塞进上下文，而是先导航、后下钻：L1 决定去哪找，L2 回答具体怎么做。</p>
+          <figure class="paper-visual hero"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_03_source.png"><figcaption>论文原图 · 第 3 页</figcaption></figure>
+          <div class="sections"><section><h2>L1：高层技能地图</h2><div class="body">人工定义约 30 个类别，覆盖视觉、NLP、时间序列、表格、分子数据、特征工程与集成。每个 L1[k] 同时包含该领域的高层指南，以及相关 L2 文档的短描述目录。</div></section><section><h2>L2：场景化工程配方</h2><div class="body">约 1000 份自包含文档来自竞赛复盘、技术博客、官方文档、代码库和历史运行目录，保存某类特征提取、模型技巧或失败模式。分层结构降低无关知识进入上下文造成的干扰。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>信息流洞察：目录常驻，正文按需加载；知识规模和上下文长度因此可以解耦。</div></aside>
+        </article>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>4/8</span></div>
+          <h1>query(k,j) 到底做了什么？</h1>
+          <p class="lead">论文没有复杂训练公式，最关键的“算法”是两阶段查询，它控制每次决策实际看到哪一段外部知识。</p>
+          <figure class="paper-visual compact"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_04_source.png"><figcaption>论文原图 · 第 11 页</figcaption></figure>
+          <div class="sections"><section><h2>先问类别</h2><div class="body">执行 query(k)=L1[k]，返回类别 k 的高层指南和 L2 索引。若指南已足够，Agent 直接决策；这避免每个小问题都读取长文档，也保留了全局策略约束。</div></section><section><h2>再问文档</h2><div class="body">需要窄场景配方时，Agent 根据索引描述选择 j，再执行 query(k,j)=L2[k][j]。因此检索条件同时包含任务、当前 repository 状态和调用角色，而不是只用初始问题做一次向量搜索。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>它改变的是上下文中的信息流，不更新 LLM 参数；收益应来自更相关的证据进入正确决策时刻。</div></aside>
+        </article>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>5/8</span></div>
+          <h1>一次运行怎样变成记忆？</h1>
+          <p class="lead">系统在任务结束后离线提炼，而不是把整段日志原样存入长期记忆。</p>
+          <figure class="paper-visual compact"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_05_source.png"><figcaption>论文原图 · 第 12 页</figcaption></figure>
+          <div class="sections"><section><h2>L2 Builder 提炼经验</h2><div class="body">它读取完整工作目录，识别最相关类别，把设计选择、失败实验和最佳策略去重、归一化，生成新的 L2[k*][j*] 及检索描述。新增网页内容也经过同样的分类与清洗流程。</div></section><section><h2>L1 Builder 压缩共识</h2><div class="body">新 L2 写入后，L1 Builder 在保持结构与长度预算的前提下，补充新策略或已知陷阱，并扩展索引。这样细节留在 L2，高频共识逐步上浮到 L1。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>因果链：轨迹提炼减少噪声，分层写回提高复用；但论文没有测试错误经验污染与回滚。</div></aside>
+        </article>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>6/8</span></div>
+          <h1>知识怎样落到最终模型？</h1>
+          <p class="lead">两个真实任务说明 Agent 的价值不是发明新算法，而是把成熟工程技巧组合成完整、稳定的方案。</p>
+          <figure class="paper-visual compact"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_06_source.png"><figcaption>论文原图 · 第 6 页</figcaption></figure>
+          <div class="sections"><section><h2>心脏病：异构树融合</h2><div class="body">两组 CatBoost 加 XGBoost、LightGBM，分别交叉验证；各模型预测先做 rank transform，再用 OOF 数据搜索融合权重。统一尺度后，校准差异不会直接破坏排序型 AUC 融合。</div></section><section><h2>ADMET：双表征互补</h2><div class="body">图网络分支学习分子结构，LightGBM 分支读取 ECFP4、FCFP4、MACCS 与 2D 描述符；先逐任务融合两分支，再对 9 个 checkpoint 做受约束加权，兼顾深度表征与经典化学特征。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>组件协同的意义在误差互补：不同模型提供不同归纳偏置，OOF 权重把选择依据留在训练数据内。</div></aside>
+        </article>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>7/8</span></div>
+          <h1>70.7% 证明了什么？</h1>
+          <p class="lead">主结果证明完整系统竞争力很强；真实竞赛的匹配设置比较进一步表明，它优于两个知识机制较弱的 Agent。</p>
+          <figure class="paper-visual hero"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_07_source.png"><figcaption>论文原图 · 第 4 页</figcaption></figure>
+          <div class="sections"><section><h2>MLE-Bench 主结果</h2><div class="body">75 项任务总体奖牌率 70.7%；高、中、低难度组分别为 46.67%、73.68%、81.82%，三个分组均排第一。它支持系统跨多模态任务有效，但排行榜基线的底模与预算不完全统一。</div></section><section><h2>同设置基线比较</h2><div class="body">心脏病私榜 AUC：0.95529 对 0.95492/0.95425；ADMET MA-RAE：0.6300 对 0.7000/0.6735。三者使用 Claude Opus 4.7、24 小时和同硬件，整体系统优势更可信。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>重要边界：这不是 L1/L2 的组件 ablation。架构同时改变，不能把全部增益单独归因于动态加载或经验写回。</div></aside>
+        </article>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>8/8</span></div>
+          <h1>离“越用越强”还差什么？</h1>
+          <p class="lead">论文证明了一个强系统，却尚未证明知识库会在长期运行中稳定、自主地持续提升。</p>
+          <figure class="paper-visual compact"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_08_source.png"><figcaption>论文原图 · 第 8 页</figcaption></figure>
+          <div class="sections"><section><h2>证据缺口与成本</h2><div class="body">没有关闭 L1、L2、动态加载、写回的消融，也没有任务数增长曲线、随机种子方差、知识冲突或过时条目测试。复现需要 Opus 4.7、7 条路线、24 小时、24 vCPU、256 GB RAM 和单张 A100。</div></section><section><h2>三个可迁移原则</h2><div class="body">第一，长期记忆应保存结构化技能而非原始对话；第二，目录常驻、正文按需加载；第三，写回必须带来源、版本、置信度、冲突检测与回滚。只有这样，经验积累才可审计。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>作者也承认 harness 仍固定：系统学习了“记住什么”，还没有学习“怎样重构自己的工作方式”。</div></aside>
+        </article></body></html>

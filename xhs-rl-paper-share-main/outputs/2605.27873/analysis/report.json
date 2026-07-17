@@ -1,0 +1,11 @@
+{
+  "paper_id": "2605.27873",
+  "title": "AIBuildAI-2: A Knowledge-Enhanced Agent for Automatically Building AI Models",
+  "thesis": "将多智能体自动建模流程与分层、动态检索、可持续写回的外部知识系统结合，可以显著提高端到端 ML 工程任务的竞争力。",
+  "problem": "现有智能体依赖静态参数知识、噪声较大的即时搜索或固定文档库，难以稳定获得和积累实用 ML 工程经验。",
+  "method": ["Manager 加 Designer/Coder/Tuner 的并行候选搜索", "约 30 类 L1 高层指南与约 1000 份 L2 细粒度文档", "query(k) 到 query(k,j) 的逐级动态上下文加载", "从运行轨迹与新增网页资料双路更新 L2，再增量更新 L1"],
+  "results": ["MLE-Bench 总奖牌率 70.7%", "心脏病竞赛私榜 AUC 0.95529，288/4371", "OpenADMET MA-RAE 0.6300，40/103"],
+  "evidence_boundary": "缺少知识系统内部组件消融与长期学习曲线；排行榜比较的底模和预算并非全部严格匹配。",
+  "reproduction": "MLE-Bench 使用 Claude Opus 4.7、temperature 1.0、7 个并行方案、24 小时、24 vCPU、256 GB RAM、单张 A100。",
+  "judgment": "工程设计合理且整体结果强，但论文更充分证明了完整系统的竞争力，而不是每个知识机制的独立因果贡献。"
+}

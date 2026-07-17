@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+    *{box-sizing:border-box} body{margin:0;background:#e9edf3;font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;color:#172033}
+    .slide{width:1080px;height:1440px;background:#fff;padding:70px 78px 54px;position:relative;overflow:hidden;page-break-after:always}
+    .topline{display:flex;justify-content:space-between;color:#8a94a6;font-size:18px;font-weight:700;letter-spacing:1.8px;border-bottom:2px solid #edf1f7;padding-bottom:16px}
+    h1{font-size:48px;line-height:1.17;margin:30px 0 18px;letter-spacing:-1px;color:#101827}
+    .lead{font-size:25px;line-height:1.62;margin:0 0 24px;color:#465066}
+    .paper-visual{margin:18px 0 24px;border:1px solid #dce3ee;border-radius:16px;background:#f9fbfe;padding:14px;box-shadow:0 10px 30px rgba(34,67,120,.08)}
+    .paper-visual img{display:block;width:100%;height:235px;object-fit:contain;background:white;border-radius:8px}
+    .paper-visual.hero img{height:350px} .paper-visual figcaption{font-size:16px;color:#8a94a6;text-align:right;margin-top:8px}
+    .sections{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+    section h2{font-size:26px;line-height:1.35;color:#1261d6;margin:0 0 8px}
+    section .body{font-size:21px;line-height:1.62;color:#28344a}
+    aside{position:absolute;left:78px;right:78px;bottom:54px;display:flex;gap:16px;background:linear-gradient(135deg,#eef5ff,#f7faff);border:1px solid #d9e7ff;border-radius:14px;padding:18px 22px;font-size:20px;line-height:1.5;color:#34435c}
+    aside span{font-size:30px} aside strong{color:#174d9f;font-size:21px}
+    </style></head><body>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>6/8</span></div>
+          <h1>知识怎样落到最终模型？</h1>
+          <p class="lead">两个真实任务说明 Agent 的价值不是发明新算法，而是把成熟工程技巧组合成完整、稳定的方案。</p>
+          <figure class="paper-visual compact"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_06_source.png"><figcaption>论文原图 · 第 6 页</figcaption></figure>
+          <div class="sections"><section><h2>心脏病：异构树融合</h2><div class="body">两组 CatBoost 加 XGBoost、LightGBM，分别交叉验证；各模型预测先做 rank transform，再用 OOF 数据搜索融合权重。统一尺度后，校准差异不会直接破坏排序型 AUC 融合。</div></section><section><h2>ADMET：双表征互补</h2><div class="body">图网络分支学习分子结构，LightGBM 分支读取 ECFP4、FCFP4、MACCS 与 2D 描述符；先逐任务融合两分支，再对 9 个 checkpoint 做受约束加权，兼顾深度表征与经典化学特征。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>组件协同的意义在误差互补：不同模型提供不同归纳偏置，OOF 权重把选择依据留在训练数据内。</div></aside>
+        </article></body></html>

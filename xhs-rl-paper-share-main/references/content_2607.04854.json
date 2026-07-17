@@ -1,0 +1,8 @@
+{
+  "arxiv_id": "2607.04854",
+  "title": "CARL: Constraint-Aware Reinforcement Learning for Planning with LLMs",
+  "xhs_title": "LLM 规划总是违反约束？这篇 CARL 用 RL 从根上解决了！",
+  "xhs_content": "从最新 arXiv 里挖到一篇很实用的工作，专门解决大模型做规划时「懂道理但不守规矩」的老问题！\n\n📕《CARL: Constraint-Aware Reinforcement Learning for Planning with LLMs》\n\n你有没有遇到过这种情况：让 LLM 帮你规划行程，它给出了一个非常合理的计划……但完全忽略了你说的「预算不超过500元」？这就是 LLM 规划的核心痛点——【约束遵从性差】。\n\n📗 CARL 的思路很聪明，它不依赖外部工具、不拆解任务，而是直接通过 RL 让模型【从内部建立约束意识】。\n\n具体来说，CARL 设计了一种「约束感知奖励」：把同一个问题分别以「有约束」和「无约束」两种方式喂给模型，对比输出分布的差异——如果模型真的注意到了约束，输出就应该不一样；如果差别不大，说明约束被忽略了，给惩罚。\n\n📘 实验结果很扎实：在 BlocksWorld（积木规划）、TravelPlanner（旅行规划）、T-Eval（工具调用评测）三个场景上，CARL 都明显超过了标准的 RFT（强化微调）基线，甚至超过了当时的 SOTA 推理模型。\n\n最关键的一点：CARL 不需要外部求解器，也不要求用更大的老师模型，直接端到端训练，工程落地友好！\n\n你觉得这种「让 LLM 从内部学会遵守规则」的思路有潜力吗？评论区聊聊～\n\n#机器学习 #强化学习 #大模型 #文献阅读 #LLM #AI规划",
+  "cover_path": "assets/covers/cover_2607.04854.png",
+  "tags": ["机器学习", "强化学习", "大模型", "文献阅读", "LLM", "AI规划"]
+}
