@@ -1,0 +1,19 @@
+{
+  "arxiv_id": "2607.07690",
+  "original_title": "Agon: Competitive Cross-Model RL with Implicit Rival Grading of Reasoning",
+  "abstract": "Reinforcement learning from verifiable rewards (e.g. GRPO) is the engine behind today's reasoning models, yet it grades only the final answer. We introduce Agon, which makes two competing models each other's graders. Both attempt the same problem; in alternating roles, one drafts a solution and the other reads it while solving, and each is rewarded for out-solving the other. On DeepMath with Qwen3, this doubles GRPO's pass@1. The ordering replicates on competitive-programming code and across model families.",
+  "categories": [
+    "cs.LG",
+    "cs.AI"
+  ],
+  "xhs_title": "两个AI互相当裁判，推理能力直接翻倍！",
+  "xhs_content": "刚出炉的一篇新论文，思路太有意思了——\n\n📕《Agon: Competitive Cross-Model RL with Implicit Rival Grading of Reasoning》\n\n现在的推理模型（o1、DeepSeek-R1这些）是怎么训练的？基本都是用 GRPO 这类方法，只检查【最终答案】对不对。但对难题来说，这就引导模型去【写更多】而不是【想更好】，因为推理过程本身从来没人打分。\n\n那怎么办？这篇 Agon 的 idea 很绝——\n\n📗 让两个模型互相当裁判\n\n两个模型做同一道题，轮流扮演两个角色：\n- 【起草者】：先写一个解题过程\n- 【评审者】：看完对方的解题过程后再自己解一遍\n\n谁能解出来、谁解得更好，谁就赢。为了赢，模型必须【比对方推理得更深入】——因为你已经看到了对手的思路，光靠\"写更多文字\"可糊弄不过去。\n\n📘 效果到底怎么样？\n在 DeepMath 数据集上用 Qwen3 测试，Agon 把 GRPO 的 pass@1 翻了一倍。\n而且这个效果在编程竞赛题、不同模型家族（Qwen3.5、Gemma 4）上都验证了。\n\n最妙的地方在于——两个模型同时都在优化，对手会越来越强，这就逼着你也不得不进步。这种【动态对抗升级】是单模型 RL 给不了的。\n\n结尾作者还挖了个坑：现在是两个模型用文本对话，下一步是让它们在 latent space 里直接一起推理。想象空间很大。\n\n你觉得这种\"对抗训练\"的路子会成为 RL 的下一个方向吗？评论区聊聊～\n\n#机器学习 #强化学习 #推理模型 #文献阅读 #大模型 #AI前沿",
+  "tags": [
+    "机器学习",
+    "强化学习",
+    "推理模型",
+    "文献阅读",
+    "大模型",
+    "AI前沿"
+  ]
+}

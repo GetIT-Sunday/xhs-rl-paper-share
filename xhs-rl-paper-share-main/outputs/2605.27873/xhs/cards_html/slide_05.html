@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+    *{box-sizing:border-box} body{margin:0;background:#e9edf3;font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;color:#172033}
+    .slide{width:1080px;height:1440px;background:#fff;padding:70px 78px 54px;position:relative;overflow:hidden;page-break-after:always}
+    .topline{display:flex;justify-content:space-between;color:#8a94a6;font-size:18px;font-weight:700;letter-spacing:1.8px;border-bottom:2px solid #edf1f7;padding-bottom:16px}
+    h1{font-size:48px;line-height:1.17;margin:30px 0 18px;letter-spacing:-1px;color:#101827}
+    .lead{font-size:25px;line-height:1.62;margin:0 0 24px;color:#465066}
+    .paper-visual{margin:18px 0 24px;border:1px solid #dce3ee;border-radius:16px;background:#f9fbfe;padding:14px;box-shadow:0 10px 30px rgba(34,67,120,.08)}
+    .paper-visual img{display:block;width:100%;height:235px;object-fit:contain;background:white;border-radius:8px}
+    .paper-visual.hero img{height:350px} .paper-visual figcaption{font-size:16px;color:#8a94a6;text-align:right;margin-top:8px}
+    .sections{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+    section h2{font-size:26px;line-height:1.35;color:#1261d6;margin:0 0 8px}
+    section .body{font-size:21px;line-height:1.62;color:#28344a}
+    aside{position:absolute;left:78px;right:78px;bottom:54px;display:flex;gap:16px;background:linear-gradient(135deg,#eef5ff,#f7faff);border:1px solid #d9e7ff;border-radius:14px;padding:18px 22px;font-size:20px;line-height:1.5;color:#34435c}
+    aside span{font-size:30px} aside strong{color:#174d9f;font-size:21px}
+    </style></head><body>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>5/8</span></div>
+          <h1>一次运行怎样变成记忆？</h1>
+          <p class="lead">系统在任务结束后离线提炼，而不是把整段日志原样存入长期记忆。</p>
+          <figure class="paper-visual compact"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_05_source.png"><figcaption>论文原图 · 第 12 页</figcaption></figure>
+          <div class="sections"><section><h2>L2 Builder 提炼经验</h2><div class="body">它读取完整工作目录，识别最相关类别，把设计选择、失败实验和最佳策略去重、归一化，生成新的 L2[k*][j*] 及检索描述。新增网页内容也经过同样的分类与清洗流程。</div></section><section><h2>L1 Builder 压缩共识</h2><div class="body">新 L2 写入后，L1 Builder 在保持结构与长度预算的前提下，补充新策略或已知陷阱，并扩展索引。这样细节留在 L2，高频共识逐步上浮到 L1。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>因果链：轨迹提炼减少噪声，分层写回提高复用；但论文没有测试错误经验污染与回滚。</div></aside>
+        </article></body></html>

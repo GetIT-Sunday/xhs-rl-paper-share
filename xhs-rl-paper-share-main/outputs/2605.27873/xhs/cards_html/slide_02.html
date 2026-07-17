@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+    *{box-sizing:border-box} body{margin:0;background:#e9edf3;font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;color:#172033}
+    .slide{width:1080px;height:1440px;background:#fff;padding:70px 78px 54px;position:relative;overflow:hidden;page-break-after:always}
+    .topline{display:flex;justify-content:space-between;color:#8a94a6;font-size:18px;font-weight:700;letter-spacing:1.8px;border-bottom:2px solid #edf1f7;padding-bottom:16px}
+    h1{font-size:48px;line-height:1.17;margin:30px 0 18px;letter-spacing:-1px;color:#101827}
+    .lead{font-size:25px;line-height:1.62;margin:0 0 24px;color:#465066}
+    .paper-visual{margin:18px 0 24px;border:1px solid #dce3ee;border-radius:16px;background:#f9fbfe;padding:14px;box-shadow:0 10px 30px rgba(34,67,120,.08)}
+    .paper-visual img{display:block;width:100%;height:235px;object-fit:contain;background:white;border-radius:8px}
+    .paper-visual.hero img{height:350px} .paper-visual figcaption{font-size:16px;color:#8a94a6;text-align:right;margin-top:8px}
+    .sections{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+    section h2{font-size:26px;line-height:1.35;color:#1261d6;margin:0 0 8px}
+    section .body{font-size:21px;line-height:1.62;color:#28344a}
+    aside{position:absolute;left:78px;right:78px;bottom:54px;display:flex;gap:16px;background:linear-gradient(135deg,#eef5ff,#f7faff);border:1px solid #d9e7ff;border-radius:14px;padding:18px 22px;font-size:20px;line-height:1.5;color:#34435c}
+    aside span{font-size:30px} aside strong{color:#174d9f;font-size:21px}
+    </style></head><body>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>2/8</span></div>
+          <h1>多智能体如何搜索方案？</h1>
+          <p class="lead">Manager 维护并行实验路线，再根据训练反馈决定下一步。</p>
+          <figure class="paper-visual hero"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_02_source.png"><figcaption>论文原图 · 第 3 页</figcaption></figure>
+          <div class="sections"><section><h2>角色不是简单流水线</h2><div class="body">Setup 准备环境，Designer 提方案，Coder 实现排错，Tuner 从日志调参，Aggregator 融合结果。Manager 可反复召回任一角色，因此实验失败会改变后续搜索方向。</div></section><section><h2>七个候选仓库</h2><div class="body">每个任务初始化 7 个仓库，分别保存设计、代码、日志和验证分数。Manager 延长强路线、淘汰弱配置，把 24 小时预算集中到更有希望的方案。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>因为路线状态彼此隔离，系统能保留多样性，也能让最终集成利用不同误差模式。</div></aside>
+        </article></body></html>

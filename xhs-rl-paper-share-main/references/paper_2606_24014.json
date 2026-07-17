@@ -1,0 +1,19 @@
+{
+  "arxiv_id": "2606.24014",
+  "title": "Reinforcement Learning Towards Broadly and Persistently Beneficial Models",
+  "summary": "As AI systems are deployed across increasingly diverse and high-stakes settings, model alignment must generalize beyond the tasks and domains seen during training. This is especially important for reinforcement learning (RL), which can introduce unexpected misalignment through reward hacking, deception, or other unintended strategies. We study whether RL on beneficial behavior, instantiated in realistic domains, can produce broad and persistent alignment generalization beyond the training distribution. We construct a dataset of realistic situations designed to measure and train beneficial traits, such as truthfulness, fairness, risk awareness, and corrigibility, spanning varied domains, including health, science, and education. We then train models with RL on this dataset and evaluate them on more than 50 independent benchmarks of alignment and beneficial behavior. Compared to a compute-matched baseline, beneficial trait RL improves performance on over 80% of these out-of-distribution benchmarks.",
+  "authors": [
+    "Akshay V. Jagadeesh",
+    "Rahul K. Arora",
+    "Khaled Saab",
+    "Ali Malik",
+    "Karan Singhal"
+  ],
+  "published": "2026-06-22",
+  "categories": [
+    "cs.AI",
+    "cs.LG"
+  ],
+  "arxiv_url": "https://arxiv.org/abs/2606.24014",
+  "pdf_url": "https://arxiv.org/pdf/2606.24014"
+}

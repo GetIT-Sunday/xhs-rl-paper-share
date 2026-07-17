@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+    *{box-sizing:border-box} body{margin:0;background:#e9edf3;font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;color:#172033}
+    .slide{width:1080px;height:1440px;background:#fff;padding:70px 78px 54px;position:relative;overflow:hidden;page-break-after:always}
+    .topline{display:flex;justify-content:space-between;color:#8a94a6;font-size:18px;font-weight:700;letter-spacing:1.8px;border-bottom:2px solid #edf1f7;padding-bottom:16px}
+    h1{font-size:48px;line-height:1.17;margin:30px 0 18px;letter-spacing:-1px;color:#101827}
+    .lead{font-size:25px;line-height:1.62;margin:0 0 24px;color:#465066}
+    .paper-visual{margin:18px 0 24px;border:1px solid #dce3ee;border-radius:16px;background:#f9fbfe;padding:14px;box-shadow:0 10px 30px rgba(34,67,120,.08)}
+    .paper-visual img{display:block;width:100%;height:235px;object-fit:contain;background:white;border-radius:8px}
+    .paper-visual.hero img{height:350px} .paper-visual figcaption{font-size:16px;color:#8a94a6;text-align:right;margin-top:8px}
+    .sections{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+    section h2{font-size:26px;line-height:1.35;color:#1261d6;margin:0 0 8px}
+    section .body{font-size:21px;line-height:1.62;color:#28344a}
+    aside{position:absolute;left:78px;right:78px;bottom:54px;display:flex;gap:16px;background:linear-gradient(135deg,#eef5ff,#f7faff);border:1px solid #d9e7ff;border-radius:14px;padding:18px 22px;font-size:20px;line-height:1.5;color:#34435c}
+    aside span{font-size:30px} aside strong{color:#174d9f;font-size:21px}
+    </style></head><body>
+        <article class="slide">
+          <div class="topline"><span>ARXIV PAPER NOTES</span><span>4/8</span></div>
+          <h1>query(k,j) 到底做了什么？</h1>
+          <p class="lead">论文没有复杂训练公式，最关键的“算法”是两阶段查询，它控制每次决策实际看到哪一段外部知识。</p>
+          <figure class="paper-visual compact"><img src="file:///E:/%E5%A5%87%E6%80%9D%E5%A6%99%E6%83%B3%E9%A1%B9%E7%9B%AE/xhs-rl-paper-share-main/xhs-rl-paper-share-main/outputs/2605.27873/xhs/media/slide_04_source.png"><figcaption>论文原图 · 第 11 页</figcaption></figure>
+          <div class="sections"><section><h2>先问类别</h2><div class="body">执行 query(k)=L1[k]，返回类别 k 的高层指南和 L2 索引。若指南已足够，Agent 直接决策；这避免每个小问题都读取长文档，也保留了全局策略约束。</div></section><section><h2>再问文档</h2><div class="body">需要窄场景配方时，Agent 根据索引描述选择 j，再执行 query(k,j)=L2[k][j]。因此检索条件同时包含任务、当前 repository 状态和调用角色，而不是只用初始问题做一次向量搜索。</div></section></div>
+          <aside><span>💡</span><div><strong>设计理解</strong><br>它改变的是上下文中的信息流，不更新 LLM 参数；收益应来自更相关的证据进入正确决策时刻。</div></aside>
+        </article></body></html>
