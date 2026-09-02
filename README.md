@@ -38,6 +38,7 @@
 | ✍️ Content Generation | Generate Xiaohongshu-style copy from paper abstract — no LLM API Key required |
 | 🖼️ Cover Extraction | Auto-extract arXiv paper first page as cover image via PyMuPDF |
 | 📤 Publishing | Publish image+text notes via XHS Creator API, supports private preview and public publish |
+| 🏷️ Clickable Topics | Resolve `#tag` in the copy into real Xiaohongshu topic IDs so tags render as tappable official topics, not plain text |
 | 🔄 Deduplication | Maintain published list to avoid re-publishing |
 
 ---
@@ -155,6 +156,37 @@ export XHS_COOKIE='a1=xxx;web_session=xxx;webId=xxx'
 python3 scripts/publish_to_xhs.py --content-json references/content_2606_24014.json
 ```
 
+### Cookie cache location
+
+`cookie_manager.py` caches the QR-login cookie (file mode `600`). The path is resolved in this order:
+
+| Variable | Meaning |
+|-|-|
+| `XHS_COOKIE_CACHE` | Full path to the cache file. Highest priority |
+| `XHS_WORKSPACE` | An existing directory; cache is written to `<dir>/.xhs_cookie_cache.json` |
+| neither set | Falls back to `~/.xhs_cookie_cache.json` |
+
+### Model-generated covers (optional)
+
+By default the cover is the arXiv first-page screenshot and **needs no configuration**. Pass `--gpt-cover` to redraw it with an image model. The backend is resolved as *external script → image API*; if neither is configured it falls back to the raw first page:
+
+| Variable | Default | Meaning |
+|-|-|-|
+| `XHS_IMAGE_SCRIPT` | — | Path to your own script, must accept `--prompt` / `--image` / `--output` / `--size` |
+| `XHS_IMAGE_API_KEY` | falls back to `OPENAI_API_KEY` | API key for the image service |
+| `XHS_IMAGE_BASE_URL` | `https://api.openai.com/v1` | OpenAI-compatible endpoint; point it at any compatible service |
+| `XHS_IMAGE_MODEL` | `gpt-image-1` | Image model name |
+| `XHS_IMAGE_SIZE` | `1024x1536` | Output size (portrait works best for Xiaohongshu) |
+
+```bash
+export XHS_IMAGE_API_KEY='sk-xxx'
+export XHS_IMAGE_BASE_URL='https://api.openai.com/v1'
+python3 scripts/capture_cover.py --arxiv-id 2103.04918 --gpt-cover \
+  --title "A Survey of Embodied AI"
+```
+
+It calls the OpenAI-compatible `POST {base_url}/images/edits` image-to-image endpoint with the paper's first page as the reference image.
+
 <div align="right"><a href="#xhs-rl-paper-share">↑ back to top</a></div>
 
 ---
@@ -174,6 +206,7 @@ Pure Python, standard PyPI dependencies only. Runs anywhere.
 - ✅ Zero platform lock-in
 - ✅ Works in any Python 3.8+ environment
 - ✅ Minimal dependency surface
+- ✅ Bring-your-own image-model API key for covers (OpenAI-compatible)
 
 </td>
 <td valign="top">
@@ -181,7 +214,7 @@ Pure Python, standard PyPI dependencies only. Runs anywhere.
 Everything in `main`, plus dodo AI Agent platform integration.
 
 - ✅ dodo Skill protocol (`SKILL.md`)
-- ✅ GPT Image cover generation
+- ✅ Covers via dodo's built-in GPT Image skill (no key needed)
 - ✅ `arxiv-paper-reader` deep-read reports
 
 </td>

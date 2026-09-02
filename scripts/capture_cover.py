@@ -5,7 +5,14 @@
 流程：
   1. 下载 arXiv PDF → 提取首页为 PNG
   2. 直接输出首页截图（真实感强，有利于推流）
-  3. 可选：加 --gpt-cover 参数改用 GPT Image 二次创作
+  3. 可选：加 --gpt-cover 参数改用生图模型二次创作
+
+--gpt-cover 的生图后端按以下顺序解析，任一可用即生效，全部不可用则降级为首页直出：
+  1. 外部生图脚本：环境变量 XHS_IMAGE_SCRIPT 指向一个接受
+     --prompt / --image / --output / --size 参数的脚本
+  2. 生图 API：环境变量 XHS_IMAGE_API_KEY（或 OPENAI_API_KEY），可选配
+     XHS_IMAGE_BASE_URL（默认 https://api.openai.com/v1）、
+     XHS_IMAGE_MODEL（默认 gpt-image-1），走 OpenAI 兼容的 images/edits 接口
 
 用法：
   python3 capture_cover.py --arxiv-id 2301.12345
@@ -14,14 +21,28 @@
 """
 
 import argparse
+import base64
+import json
+import os
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 
-GPT_IMAGE_SCRIPT = Path(__file__).parent.parent.parent / "gpt-image" / "scripts" / "gpt_image.py"
+# 生图后端配置：全部通过环境变量注入，不假设任何目录布局
+IMAGE_SCRIPT = os.environ.get("XHS_IMAGE_SCRIPT", "").strip()
+IMAGE_API_KEY = (
+    os.environ.get("XHS_IMAGE_API_KEY", "").strip()
+    or os.environ.get("OPENAI_API_KEY", "").strip()
+)
+IMAGE_BASE_URL = os.environ.get(
+    "XHS_IMAGE_BASE_URL", "https://api.openai.com/v1"
+).strip().rstrip("/")
+IMAGE_MODEL = os.environ.get("XHS_IMAGE_MODEL", "gpt-image-1").strip()
+IMAGE_SIZE = os.environ.get("XHS_IMAGE_SIZE", "1024x1536").strip()
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +123,7 @@ def pdf_first_page_to_image(pdf_path: str, output_path: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Step 2: build GPT Image prompt
+# Step 2: build the image-generation prompt
 # ---------------------------------------------------------------------------
 
 def build_edit_prompt(title: str, abstract: str) -> str:
@@ -129,39 +150,130 @@ Design requirements:
 
 
 # ---------------------------------------------------------------------------
-# Step 3: call gpt-image in edit mode
+# Step 3: call the image-generation backend (edit / image-to-image mode)
 # ---------------------------------------------------------------------------
 
-def generate_cover_with_gpt(ref_image_path: str, output_path: str,
-                             title: str, abstract: str) -> bool:
-    """以论文首页图为参考，调用 gpt-image 图生图生成封面"""
-    if not GPT_IMAGE_SCRIPT.exists():
-        print(f"❌ 未找到 gpt-image 脚本: {GPT_IMAGE_SCRIPT}", file=sys.stderr)
+def _encode_multipart(fields: dict, file_field: str, file_path: str) -> tuple:
+    """手搓 multipart/form-data，避免为一个上传引入额外依赖"""
+    import uuid
+
+    boundary = "----xhsCover" + uuid.uuid4().hex
+    crlf = b"\r\n"
+    body = bytearray()
+    for key, value in fields.items():
+        if value is None:
+            continue
+        body += b"--" + boundary.encode() + crlf
+        body += f'Content-Disposition: form-data; name="{key}"'.encode() + crlf + crlf
+        body += str(value).encode() + crlf
+    filename = Path(file_path).name
+    body += b"--" + boundary.encode() + crlf
+    body += (
+        f'Content-Disposition: form-data; name="{file_field}"; filename="{filename}"'
+    ).encode() + crlf
+    body += b"Content-Type: image/png" + crlf + crlf
+    body += open(file_path, "rb").read() + crlf
+    body += b"--" + boundary.encode() + b"--" + crlf
+    return bytes(body), f"multipart/form-data; boundary={boundary}"
+
+
+def _generate_via_script(ref_image_path: str, output_path: str, prompt: str) -> bool:
+    """调用用户自备的外部生图脚本（XHS_IMAGE_SCRIPT）"""
+    script = Path(IMAGE_SCRIPT)
+    if not script.exists():
+        print(f"❌ XHS_IMAGE_SCRIPT 指向的脚本不存在: {script}", file=sys.stderr)
         return False
 
-    prompt = build_edit_prompt(title, abstract)
-    print(f"🎨 正在用 GPT Image 图生图生成封面...")
-    print(f"   参考图: {ref_image_path}")
-
+    print(f"🎨 调用外部生图脚本生成封面: {script.name}")
     result = subprocess.run(
-        [sys.executable, str(GPT_IMAGE_SCRIPT),
+        [sys.executable, str(script),
          "--prompt", prompt,
          "--image", ref_image_path,
          "--output", output_path,
-         "--size", "1024x1536"],
+         "--size", IMAGE_SIZE],
         timeout=180,
         capture_output=True,
         text=True,
     )
-
-    if result.returncode == 0:
+    if result.returncode == 0 and Path(output_path).exists():
         print(f"✅ 封面生成成功: {output_path}")
         return True
-    else:
-        print(f"❌ GPT Image 图生图失败", file=sys.stderr)
-        if result.stderr:
-            print(result.stderr.strip(), file=sys.stderr)
+    print("❌ 外部生图脚本执行失败", file=sys.stderr)
+    if result.stderr:
+        print(result.stderr.strip()[:500], file=sys.stderr)
+    return False
+
+
+def _generate_via_api(ref_image_path: str, output_path: str, prompt: str) -> bool:
+    """以论文首页图为参考，调 OpenAI 兼容的 images/edits 接口生成封面"""
+    url = f"{IMAGE_BASE_URL}/images/edits"
+    print(f"🎨 调用生图接口生成封面: {IMAGE_MODEL} @ {IMAGE_BASE_URL}")
+
+    body, content_type = _encode_multipart(
+        {"model": IMAGE_MODEL, "prompt": prompt, "size": IMAGE_SIZE, "n": 1},
+        "image",
+        ref_image_path,
+    )
+    req = urllib.request.Request(url, data=body, method="POST")
+    req.add_header("Authorization", f"Bearer {IMAGE_API_KEY}")
+    req.add_header("Content-Type", content_type)
+
+    try:
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            payload = json.load(resp)
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:300]
+        # 只回显接口报错，绝不回显 API Key
+        print(f"❌ 生图接口返回 HTTP {e.code}: {detail}", file=sys.stderr)
         return False
+    except Exception as e:
+        print(f"❌ 生图接口调用失败: {e}", file=sys.stderr)
+        return False
+
+    items = payload.get("data") or []
+    if not items:
+        print("❌ 生图接口未返回图片数据", file=sys.stderr)
+        return False
+
+    item = items[0]
+    if item.get("b64_json"):
+        with open(output_path, "wb") as f:
+            f.write(base64.b64decode(item["b64_json"]))
+    elif item.get("url"):
+        req_img = urllib.request.Request(item["url"], headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req_img, timeout=120) as resp:
+            data = resp.read()
+        with open(output_path, "wb") as f:
+            f.write(data)
+    else:
+        print("❌ 生图接口返回的数据里既没有 b64_json 也没有 url", file=sys.stderr)
+        return False
+
+    print(f"✅ 封面生成成功: {output_path}")
+    return True
+
+
+def generate_cover_with_model(ref_image_path: str, output_path: str,
+                              title: str, abstract: str) -> bool:
+    """以论文首页图为参考做图生图封面。
+
+    按「外部脚本 → 生图 API」的顺序尝试，都不可用时返回 False，
+    由调用方降级为 arXiv 首页直出。
+    """
+    prompt = build_edit_prompt(title, abstract)
+    print(f"   参考图: {ref_image_path}")
+
+    if IMAGE_SCRIPT:
+        return _generate_via_script(ref_image_path, output_path, prompt)
+    if IMAGE_API_KEY:
+        return _generate_via_api(ref_image_path, output_path, prompt)
+
+    print(
+        "⚠️  未配置生图后端（XHS_IMAGE_SCRIPT 或 XHS_IMAGE_API_KEY），"
+        "降级为 arXiv 首页直出",
+        file=sys.stderr,
+    )
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +300,7 @@ def main():
     parser.add_argument("--categories", default="cs.LG", help="arXiv categories 逗号分隔（保留兼容）")
     parser.add_argument("--output", default=None, help="输出封面图片路径（.png）")
     parser.add_argument("--gpt-cover", action="store_true",
-                        help="用 GPT Image 二次创作封面（默认关闭，直出 arXiv 首页截图）")
+                        help="用生图模型二次创作封面（默认关闭，直出 arXiv 首页截图）；\n需配置 XHS_IMAGE_SCRIPT 或 XHS_IMAGE_API_KEY")
     args = parser.parse_args()
 
     output_dir = Path(__file__).parent.parent / "assets" / "covers"
@@ -214,11 +326,11 @@ def main():
         if not ok:
             return False
 
-        # Step 3: 直出 or GPT Image
+        # Step 3: 直出 or 生图模型二次创作
         if args.gpt_cover:
-            ok = generate_cover_with_gpt(ref_png_path, final_path, args.title, args.abstract)
+            ok = generate_cover_with_model(ref_png_path, final_path, args.title, args.abstract)
             if not ok:
-                # GPT Image 失败时降级为直出
+                # 生图失败时降级为直出
                 ok = use_raw_cover(ref_png_path, final_path)
         else:
             # 默认：直接使用 arXiv 首页截图

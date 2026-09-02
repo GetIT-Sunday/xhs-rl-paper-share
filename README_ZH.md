@@ -38,6 +38,7 @@
 | ✍️ 文案生成 | 基于摘要生成小红书风格文案，无需 LLM API Key |
 | 🖼️ 封面截取 | 自动截取 arXiv 论文首页作为封面图（依赖 PyMuPDF） |
 | 📤 发布 | 调用小红书创作者 API 发布图文笔记，支持私密预览和公开发布 |
+| 🏷️ 可点击话题 | 自动把文案里的 `#话题` 解析为真实话题 ID 并补上 `[话题]` 标记，发布出来是可点击的官方话题而非纯文本 |
 | 🔄 去重 | 维护已发布记录，避免重复发布 |
 
 ---
@@ -155,6 +156,37 @@ export XHS_COOKIE='a1=xxx;web_session=xxx;webId=xxx'
 python3 scripts/publish_to_xhs.py --content-json references/content_2606_24014.json
 ```
 
+### Cookie 缓存位置
+
+`cookie_manager.py` 会把扫码登录得到的 Cookie 缓存下来（文件权限 `600`），路径按以下顺序解析：
+
+| 环境变量 | 说明 |
+|-|-|
+| `XHS_COOKIE_CACHE` | 缓存文件的完整路径，优先级最高 |
+| `XHS_WORKSPACE` | 指定一个已存在的目录，缓存写入该目录下的 `.xhs_cookie_cache.json` |
+| 均未设置 | 兜底写入 `~/.xhs_cookie_cache.json` |
+
+### 生图封面（可选）
+
+默认封面是 arXiv 论文首页截图，**不需要任何配置**。加 `--gpt-cover` 可改用生图模型二次创作封面，后端按「外部脚本 → 生图 API」顺序解析，两者都没配置时会自动降级回首页直出：
+
+| 环境变量 | 默认值 | 说明 |
+|-|-|-|
+| `XHS_IMAGE_SCRIPT` | — | 自备生图脚本路径，需接受 `--prompt` / `--image` / `--output` / `--size` 参数 |
+| `XHS_IMAGE_API_KEY` | 回退到 `OPENAI_API_KEY` | 生图服务的 API Key |
+| `XHS_IMAGE_BASE_URL` | `https://api.openai.com/v1` | OpenAI 兼容的 API 地址，可指向任意兼容服务 |
+| `XHS_IMAGE_MODEL` | `gpt-image-1` | 生图模型名 |
+| `XHS_IMAGE_SIZE` | `1024x1536` | 出图尺寸（竖版更适合小红书） |
+
+```bash
+export XHS_IMAGE_API_KEY='sk-xxx'
+export XHS_IMAGE_BASE_URL='https://api.openai.com/v1'
+python3 scripts/capture_cover.py --arxiv-id 2103.04918 --gpt-cover \
+  --title "A Survey of Embodied AI"
+```
+
+走的是 OpenAI 兼容的 `POST {base_url}/images/edits` 图生图接口，以论文首页作为参考图。
+
 <div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
 
 ---
@@ -174,6 +206,7 @@ python3 scripts/publish_to_xhs.py --content-json references/content_2606_24014.j
 - ✅ 零平台锁定
 - ✅ 适用于任意 Python 3.8+ 环境
 - ✅ 依赖面最小
+- ✅ 生图封面可自带 API Key（OpenAI 兼容接口）
 
 </td>
 <td valign="top">
@@ -181,7 +214,7 @@ python3 scripts/publish_to_xhs.py --content-json references/content_2606_24014.j
 包含 `main` 的全部能力，并集成 dodo AI Agent 平台。
 
 - ✅ dodo Skill 协议（`SKILL.md`）
-- ✅ GPT Image 封面生成
+- ✅ 复用 dodo 的 GPT Image 技能生成封面（无需自备 Key）
 - ✅ `arxiv-paper-reader` 论文精读报告
 
 </td>

@@ -25,16 +25,27 @@ try:
 except ImportError:
     _HAS_XHS = False
 
-# Cookie 缓存路径（放在用户 home 下，沙箱销毁后也能持久）
-# Cookie 缓存路径优先用 workspace（跨会话持久），fallback 到 home
-_WORKSPACE_CACHE = Path("/home/gem/workspace/.xhs_cookie_cache.json")
+# Cookie 缓存路径解析顺序：
+#   1. 环境变量 XHS_COOKIE_CACHE 指定的完整文件路径
+#   2. 环境变量 XHS_WORKSPACE 指定目录下的 .xhs_cookie_cache.json
+#   3. 用户 home 下的 ~/.xhs_cookie_cache.json
 _HOME_CACHE = Path.home() / ".xhs_cookie_cache.json"
 
+
 def _get_cache_path() -> Path:
-    """返回可写的缓存路径：优先 workspace，其次 home"""
-    if _WORKSPACE_CACHE.parent.exists():
-        return _WORKSPACE_CACHE
+    """返回可写的 Cookie 缓存路径"""
+    explicit = os.environ.get("XHS_COOKIE_CACHE", "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
+
+    workspace = os.environ.get("XHS_WORKSPACE", "").strip()
+    if workspace:
+        workspace_dir = Path(workspace).expanduser()
+        if workspace_dir.is_dir():
+            return workspace_dir / ".xhs_cookie_cache.json"
+
     return _HOME_CACHE
+
 
 COOKIE_CACHE_PATH = _get_cache_path()
 

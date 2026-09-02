@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-在 GPT Image 生成的封面底图上叠加中文文字：
+在封面底图上叠加中文文字（底图可以是 arXiv 首页截图，也可以是生图模型产出的图）：
   - 上方模块：论文领域标签（AI 自动识别）
   - 下方模块：arXiv categories + 核心关键词
 
@@ -196,7 +196,7 @@ def compose(image_path: str, domain: str, keywords: str, output_path: str) -> bo
 
 def main():
     parser = argparse.ArgumentParser(description="在封面底图上叠加文字")
-    parser.add_argument("--image", required=True, help="GPT Image 生成的底图路径")
+    parser.add_argument("--image", required=True, help="封面底图路径")
     parser.add_argument("--domain", default="", help="领域标签文字（留空则自动推断）")
     parser.add_argument("--keywords", default="", help="关键词文字（留空则自动推断）")
     parser.add_argument("--title", default="", help="论文标题（用于自动推断）")
