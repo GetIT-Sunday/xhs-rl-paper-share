@@ -103,6 +103,9 @@ description: 自动化抓取热门强化学习论文、AI深度生成小红书�
 **话题标签**：
 - 基础：#机器学习 #强化学习 #文献阅读
 - 根据内容添加：#具身智能 #多智能体 #离线强化学习 #世界模型 等
+- 文案里按 `#话题名` 纯文本书写即可，`publish_to_xhs.py` 会自动解析话题名、
+  通过小红书话题搜索接口换取真实话题 ID，并把正文改写为 `#话题名[话题]#`，
+  最终发布出来的是可点击的官方话题（不是纯文本）
 
 ### 参考文案（必须模仿这个风格）
 
@@ -151,7 +154,8 @@ description: 自动化抓取热门强化学习论文、AI深度生成小红书�
 - `web_session`
 - `webId`
 
-Cookie 存储位置：`~/.openclaw/workspace/.xhs_cookie`
+Cookie 存储位置：`/home/gem/workspace/.xhs_cookie_cache.json`（由 `scripts/cookie_manager.py` 自动缓存，
+工作区目录不存在时回退到 `~/.xhs_cookie_cache.json`）
 
 ## 错误处理
 

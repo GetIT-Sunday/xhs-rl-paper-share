@@ -18,6 +18,7 @@
 
 import argparse
 import json
+import re
 import sys
 import os
 import subprocess
@@ -221,18 +222,53 @@ def generate_reading_report(arxiv_id, title=""):
 def fetch_topics(client, tag_names: list) -> list:
     """
     将话题名称列表转为 xhs API 所需的结构化 topic 对象列表。
-    失败时降级返回空列表，不中断发布流程。
+
+    小红书 /web_api/sns/v2/note 要求 common.hash_tag 是带 id 的结构体列表，
+    只传字符串会报 "check: common.hash_tag ... required struct with json format"。
+    这里通过话题搜索接口把话题名换成真实话题 id，失败时跳过该话题、不中断发布。
     """
     topics = []
-    for name in tag_names:
+    seen = []
+    for raw in tag_names:
+        name = raw.lstrip("#")
+        if not name or name in seen:
+            continue
+        seen.append(name)
         try:
-            results = client.get_suggest_topic(keyword=name.lstrip("#"))
-            if results:
-                topics.append(results[0])
+            results = client.get_suggest_topic(keyword=name)
         except Exception as e:
             print(f"⚠️  话题查询失败 [{name}]: {e}", file=sys.stderr)
-    print(f"   话题数: {len(topics)}/{len(tag_names)}")
+            continue
+        if not results:
+            print(f"   ⚠️  未找到话题 #{name}，已跳过")
+            continue
+        # 优先精确同名，避免被搜索接口的相关推荐带偏
+        matched = next((r for r in results if r.get("name") == name), results[0])
+        topics.append({
+            "id": matched["id"],
+            "name": matched["name"],
+            "type": matched.get("type", "official"),
+        })
+        print(f"   ✅ #{name} -> {matched['id']}")
+    print(f"   话题数: {len(topics)}/{len(seen)}")
     return topics
+
+
+def apply_topic_markers(desc: str, topics: list) -> str:
+    """把正文里的纯文本 #话题 改写为 #话题[话题]# 标记。
+
+    仅提交结构化 hash_tag 还不够：客户端是否把标签渲染成可点击话题，取决于正文
+    里有没有 [话题] 标记，缺少标记时会退化成黑色纯文本。
+    按话题名长度降序做单次替换，避免短话题名先命中而截断长话题名；已带标记的
+    话题会原样保留，重复调用不会叠加标记。
+    """
+    if not topics:
+        return desc
+    names = sorted({t["name"] for t in topics}, key=len, reverse=True)
+    pattern = re.compile(
+        "#(" + "|".join(re.escape(n) for n in names) + r")(?:\[话题\]#)?"
+    )
+    return pattern.sub(lambda m: f"#{m.group(1)}[话题]#", desc)
 
 
 def extract_tags_from_content(content: str) -> list:
@@ -262,45 +298,80 @@ def _clean_markdown(text: str) -> str:
 
 
 def publish_note(client, content_data, cover_path, is_private=False, schedule_time=None):
-    """发布笔记"""
+    """发布笔记（话题为可点击的官方话题）"""
     title = content_data["xhs_title"]
     desc = content_data["xhs_content"]
 
-    # 从正文提取话题标签并查询结构化 topic 对象
-    tag_names = extract_tags_from_content(desc)
-    topics = fetch_topics(client, tag_names) if tag_names else []
+    # 从正文提取话题标签，换取真实话题 id，并给正文补上 [话题] 标记
+    print(f"\n🔖 解析话题标签")
+    topics = fetch_topics(client, extract_tags_from_content(desc))
+    desc = apply_topic_markers(desc, topics)
 
     print(f"\n📤 发布设置")
     print(f"   标题: {title[:50]}...")
     print(f"   私密: {'是' if is_private else '否'}")
+    print(f"   话题: {len(topics)} 个")
     if schedule_time:
         print(f"   定时: {schedule_time}")
 
     try:
-        result = client.create_image_note(
-            title=title,
-            desc=desc,
-            files=[cover_path],
-            is_private=is_private,
-            post_time=schedule_time,
-            topics=topics if topics else None,
+        image_id, token = client.get_upload_files_permit("image")
+        client.upload_file(image_id, token, cover_path)
+
+        # 直接构造 /web_api/sns/v2/note 请求体：xhs 0.2.13 的 create_image_note
+        # 把 hash_tag 当字符串列表下发，服务端已不接受，必须自己传结构体列表
+        business_binds = {
+            "version": 1,
+            "noteId": 0,
+            "noteOrderBind": {},
+            "notePostTiming": {"postTime": schedule_time},
+            "noteCollectionBind": {"id": ""},
+        }
+        data = {
+            "common": {
+                "type": "normal",
+                "title": title,
+                "note_id": "",
+                "desc": desc,
+                "source": '{"type":"web","ids":"","extraInfo":"{\\"subType\\":\\"official\\"}"}',
+                "business_binds": json.dumps(business_binds, separators=(",", ":")),
+                "ats": [],
+                "hash_tag": topics,
+                "post_loc": {},
+                "privacy_info": {"op_type": 1, "type": 1 if is_private else 0},
+            },
+            "image_info": {
+                "images": [{
+                    "file_id": image_id,
+                    "metadata": {"source": -1},
+                    "stickers": {"version": 2, "floating": []},
+                    "extra_info_json": '{"mimeType":"image/jpeg"}',
+                }]
+            },
+            "video_info": None,
+        }
+        result = client.post(
+            "/web_api/sns/v2/note",
+            data,
+            headers={"Referer": "https://creator.xiaohongshu.com/"},
         )
-        
+
         # 提取笔记 ID
         note_id = result.get("data", {}).get("id", "")
         share_link = result.get("share_link", "")
-        
+
         print(f"\n✅ 发布成功!")
         print(f"   笔记 ID: {note_id}")
         print(f"   链接: {share_link}")
-        
+
         return {
             "success": True,
             "note_id": note_id,
             "share_link": share_link,
+            "topics": [t["name"] for t in topics],
             "raw_result": result
         }
-    
+
     except Exception as e:
         print(f"\n❌ 发布失败: {e}")
         import traceback
@@ -526,7 +597,7 @@ def main():
             "published_at": datetime.now().isoformat(),
             "xhs_note_id": result.get("note_id", ""),
             "xhs_link": result.get("share_link", ""),
-            "tags": ["机器学习", "强化学习"]
+            "tags": result.get("topics", [])
         })
         save_published_list(published)
         print(f"✅ 已添加到发布列表")
