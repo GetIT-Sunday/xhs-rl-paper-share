@@ -30,7 +30,7 @@
 
 > **效果演示** — arXiv 论文首页（左）→ 小红书发布笔记（右）
 >
-> <img src="assets/demo_screenshot.png" alt="效果演示：arXiv 论文发布到小红书" width="100%">
+> <img src="assets/screenshot_demo.png" alt="效果演示：arXiv 论文发布到小红书" width="100%">
 
 | 功能 | 说明 |
 |---|---|
