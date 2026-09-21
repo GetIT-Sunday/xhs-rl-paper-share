@@ -30,7 +30,7 @@
 
 > **Demo** — arXiv paper (left) → XHS published note (right)
 >
-> <img src="assets/demo_screenshot.png" alt="Demo: arXiv paper to Xiaohongshu post" width="100%">
+> <img src="assets/screenshot_demo.png" alt="Demo: arXiv paper to Xiaohongshu post" width="100%">
 
 | Feature | Description |
 |---|---|
