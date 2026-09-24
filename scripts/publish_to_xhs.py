@@ -23,7 +23,12 @@ import sys
 import os
 import subprocess
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+sys.path.insert(0, str(Path(__file__).parent))
+from paper_pipeline import build_evidence_pack
+from evidence_check import validate_content
+from publication_store import record_publication
 
 try:
     from xhs import XhsClient
@@ -34,7 +39,6 @@ except ImportError:
 
 # 路径
 BASE_DIR = Path(__file__).parent.parent
-PUBLISHED_PATH = BASE_DIR / "references" / "published_papers.json"
 COVERS_DIR = BASE_DIR / "assets" / "covers"
 CONTENT_DIR = BASE_DIR / "references"
 
@@ -48,22 +52,6 @@ def parse_cookie(cookie_str):
             key, value = item.split('=', 1)
             cookie[key.strip()] = value.strip()
     return cookie
-
-
-def load_published_list():
-    """加载已发布论文列表"""
-    if not PUBLISHED_PATH.exists():
-        return {"published": []}
-    with open(PUBLISHED_PATH, "r") as f:
-        return json.load(f)
-
-
-def save_published_list(data):
-    """保存已发布论文列表"""
-    PUBLISHED_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(PUBLISHED_PATH, "w") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    print(f"💾 已更新发布列表: {PUBLISHED_PATH}")
 
 
 def create_xhs_client(cookie_str):
@@ -453,6 +441,8 @@ def main():
 
     # cookie 校验（默认 API 模式需要）
     if not args.mcp and not args.draft and not args.cookie:
+        args.cookie = os.environ.get("XHS_COOKIE")
+    if not args.mcp and not args.draft and not args.cookie:
         # 尝试从 cookie_manager 自动获取
         try:
             sys.path.insert(0, str(Path(__file__).parent))
@@ -481,6 +471,21 @@ def main():
     else:
         print("❌ 请提供 --arxiv-id 或 --content-json")
         sys.exit(1)
+
+    # Every note carries an explicit, auditable evidence boundary.
+    evidence_path = CONTENT_DIR / f"evidence_{arxiv_id.replace('.', '_')}.json"
+    if not evidence_path.exists():
+        build_evidence_pack({
+            "arxiv_id": arxiv_id,
+            "title": content_data.get("original_title", content_data.get("title", "")),
+            "summary": content_data.get("abstract", ""),
+            "arxiv_url": f"https://arxiv.org/abs/{arxiv_id}",
+            "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}",
+        }, evidence_path)
+    content_data["evidence_pack"] = str(evidence_path)
+    content_data["evidence_validation"] = validate_content(content_data, json.loads(evidence_path.read_text()))
+    if content_data["evidence_validation"]["warnings"]:
+        print(f"⚠️ 证据校验提醒: {', '.join(content_data['evidence_validation']['warnings'])}")
 
     # 清理正文中的 markdown 语法（小红书 API 不支持 ** ** 等标记）
     content_data["xhs_content"] = _clean_markdown(content_data["xhs_content"])
@@ -512,6 +517,8 @@ def main():
         result = publish_via_mcp(content_data, cover_path, mcp_url=args.mcp_url)
         if result["success"]:
             print(f"✅ 发布成功（xiaohongshu-mcp）: {result.get('text', '')[:200]}")
+            if args.mark_published:
+                record_publication(content_data, result)
         else:
             print(f"❌ 发布失败: {result['error']}")
         return 0 if result["success"] else 1
@@ -542,16 +549,7 @@ def main():
 
     # 更新已发布列表
     if result["success"] and args.mark_published:
-        published = load_published_list()
-        published["published"].append({
-            "arxiv_id": arxiv_id,
-            "title": content_data["original_title"],
-            "published_at": datetime.now().isoformat(),
-            "xhs_note_id": result.get("note_id", ""),
-            "xhs_link": result.get("share_link", ""),
-            "tags": result.get("topics", [])
-        })
-        save_published_list(published)
+        record_publication(content_data, result, schedule=args.schedule)
         print(f"✅ 已添加到发布列表")
 
     # 保存发布结果

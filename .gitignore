@@ -19,6 +19,17 @@ assets/covers/tmp*
 # Publish result snapshots (contain note IDs etc.)
 references/result_*.json
 
+# Local creator-center metrics and learned weights (may contain account data)
+references/metrics_snapshots.jsonl
+references/feedback_metrics.jsonl
+references/feedback_report.md
+references/strategy_weights.json
+references/account_summary.json
+references/evidence_*.json
+
+# Private Paper2XHS runtime state (snapshots, policy, reports, locks)
+.paper2xhs/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper2XHS 科研内容运营"
+  short_description: "将论文转为小红书内容，连接证据核验、封面生成、发布与反馈优化"
+  default_prompt: "使用 $paper2xhs 为我选择一篇机器人学习论文，生成有证据支撑的中文小红书草稿并展示，暂不发布。"

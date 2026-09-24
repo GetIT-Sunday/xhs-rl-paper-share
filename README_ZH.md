@@ -1,326 +1,175 @@
-<a name="xhs-rl-paper-share"></a>
-<div align="right">
-  <a href="README.md">English</a>
+<div align="center">
+
+<img src="assets/banner.png" alt="Paper2XHS 项目横幅：从 arXiv 论文到小红书内容（概念示意）" width="100%">
+
+# Paper2XHS
+
+**把科研论文写成小红书内容，用运营反馈帮助下一次选题。**
+
+面向强化学习、具身智能和机器人学习领域研究者与科普创作者的 Agent Skill。
+
+[English](README.md) · [简体中文](README_ZH.md)
+
+![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square)
+![Agent Skill](https://img.shields.io/badge/Agent-Skill-0066cc?style=flat-square)
+[![GitHub stars](https://img.shields.io/github/stars/GetIT-Sunday/xhs-rl-paper-share?style=flat-square)](https://github.com/GetIT-Sunday/xhs-rl-paper-share)
+
+[快速开始](#快速开始) · [可以做什么](#可以做什么) · [反馈决策](#让反馈参与决策) · [文档](#文档)
+
 </div>
 
-<p align="center">
-  <img src="assets/banner.png" alt="xhs-rl-paper-share banner" width="100%">
-</p>
+## 快速开始
 
-<p align="center">
-  <a href="#-功能特性">功能特性</a> •
-  <a href="#-安装">安装</a> •
-  <a href="#-使用方法">使用方法</a> •
-  <a href="#%EF%B8%8F-命令">命令</a> •
-  <a href="#%EF%B8%8F-配置">配置</a> •
-  <a href="#-分支说明">分支说明</a>
-</p>
+把下面这句话发给具备 GitHub Skill 安装能力的 Agent：
 
-<p align="center">
-  <img src="https://img.shields.io/badge/python-3.8+-yellow?style=flat-square" alt="Python">
-  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License">
-  <a href="https://star-history.com/#GetIT-Sunday/xhs-rl-paper-share">
-    <img src="https://img.shields.io/github/stars/GetIT-Sunday/xhs-rl-paper-share?style=social" alt="Stars">
-  </a>
-</p>
+```text
+Help me install Paper2XHS from https://github.com/GetIT-Sunday/xhs-rl-paper-share with Skills. Install the repository root as the paper2xhs skill.
+```
 
----
+安装后新建会话或刷新 Skills，然后说：
 
-## ✨ 功能特性
+```text
+使用 $paper2xhs，选一篇近期机器人学习论文，生成有证据支撑的中文小红书草稿和论文首页封面。先展示结果，暂不发布。
+```
 
-> **效果演示** — arXiv 论文首页（左）→ 小红书发布笔记（右）
->
-> <img src="assets/screenshot_demo.png" alt="效果演示：arXiv 论文发布到小红书" width="100%">
+Skill 会引导准备环境、选择论文、整理 Evidence Pack，再由当前 Agent 写中文成稿。**生成草稿不需要小红书登录，也不必单独配置 LLM API Key。** 发布和在线指标采集需要你自己的账号和配置。
 
-| 功能 | 说明 |
+**环境要求：**Python 3.10+、macOS/Linux 或 Windows WSL，以及支持 Skills 的 Agent。安装依赖和获取论文需要网络；GitHub 安装指令要求远端仓库已包含 Skill 文件。
+
+<details>
+<summary><strong>手动安装到 Codex</strong></summary>
+
+```bash
+git clone https://github.com/GetIT-Sunday/xhs-rl-paper-share.git \
+  "${CODEX_HOME:-$HOME/.codex}/skills/paper2xhs"
+```
+
+目录已存在时，请先更新或备份。也可将维护者提供的 `paper2xhs.zip` 解压到 Skills 目录，保留完整的 `paper2xhs/` 文件夹及其中的脚本和参考文档。
+
+</details>
+
+## 可以做什么
+
+| 能力 | 实际功能 |
 |---|---|
-| 📄 论文抓取 | 从 arXiv 抓取最新 RL、具身智能、机器人学习论文 |
-| ✍️ 文案生成 | 基于摘要生成小红书风格文案，无需 LLM API Key |
-| 🖼️ 封面截取 | 自动截取 arXiv 论文首页作为封面图（依赖 PyMuPDF） |
-| 📤 发布 | 调用小红书创作者 API 发布图文笔记，支持私密预览和公开发布 |
-| 🏷️ 可点击话题 | 自动把文案里的 `#话题` 解析为真实话题 ID 并补上 `[话题]` 标记，发布出来是可点击的官方话题而非纯文本 |
-| 🔄 去重 | 维护已发布记录，避免重复发布 |
+| **选择论文** | 从 arXiv 召回候选，按发布历史去重，结合主题相关性、时效性、证据量和适用策略权重排序。 |
+| **依据证据写作** | 将来源链接、摘要片段、数字和术语写入 Evidence Pack，由当前 Agent 整理成中文草稿。 |
+| **准备与发布** | 截取 PDF 首页封面、匹配话题标签，并在用户要求时通过配置好的适配器发布。 |
+| **使用运营反馈** | 导入报表或使用可配置的创作者中心适配器，保存带时间戳的快照并更新表达策略权重。 |
+| **保留决策记录** | 记录实际使用的策略和权重版本；凭证、草稿、发布历史与运营数据保存在用户本机。 |
 
----
+你可以这样说：
 
-## 📦 安装
+- “用 $paper2xhs 面向机器人学习读者解读这篇 arXiv 论文，说明方法、证据和局限。”
+- “用 $paper2xhs 导入这份创作者报表，解释反馈对选题排序有什么影响。”
+- “用 $paper2xhs 发布我已确认的成稿，并记录它使用的表达策略。”
 
-> **前置条件**：Python 3.8+ · 一个小红书创作者账号
+**Skill 写作和脚本生成有所不同：**完整中文成稿由当前 Agent 完成；独立生成脚本和无人值守脚本调度目前输出摘要模板。
+
+## 示例输出
+
+<img src="assets/screenshot_demo.png" alt="项目示例：左侧是 arXiv 论文，右侧是已发布的中文小红书笔记" width="820">
+
+*从论文到已发布笔记：这是项目已有示例，不是实时指标看板。*
+
+## 可追溯的内容依据
+
+**Evidence Pack（证据包）**是论文材料所支持内容的本地记录，包括来源链接、摘要片段、数字和术语。Agent 据此核对草稿中的方法与结果。
+
+内置检查器可以标记部分无依据数字和英文术语，不是完整语义事实核验；当前发布脚本也仅将检查结果作为警告。超出摘要范围的结论，需要阅读全文并补录证据。
+
+成稿 JSON、策略标签和来源要求见[内容与归因指南](references/skill-content.md)。
+
+## 让反馈参与决策
+
+反馈路径为：**运营指标 → 时间快照 → 平滑策略权重 → 候选排序与文案策略**。
+
+- **区分指标。**缺失计数保持未知；阅读量不等于曝光量，账号净涨粉也不自动归因到单篇笔记。
+- **对齐观察时长。**通常取每篇笔记发布后 24–30 小时的一次有效观测，要求曝光已知且策略可归因；重复采集不会增加学习样本。
+- **平滑小样本反馈。**使用 capped Gamma–Poisson 事件率估计，每篇笔记的曝光贡献上限为 10,000，只更新实际使用策略的权重。
+- **记录如何决策。**候选排序和模板生成读取策略；发布调度器会重新排列缓存和新候选，并保存选择记录。
+
+这些权重反映观察相关性，不能证明策略带来因果提升。没有可用策略时，文案默认采用中性解释方式。
+
+**本地 CSV/JSON 导入可用；在线采集需登录并验证字段映射。**配置示例是合成结构，计数口径默认 `unknown`，确认后台提供逐笔累计值后才可设为 `lifetime`。启用在线采集或周期发布前，请阅读[运维指南](references/skill-operations.md)。
+
+## 在终端运行
+
+开发者或习惯脚本的用户可以直接运行：
 
 ```bash
 git clone https://github.com/GetIT-Sunday/xhs-rl-paper-share.git
 cd xhs-rl-paper-share
-pip install xhs xhshow PyMuPDF requests arxiv
+python3 scripts/paper2xhs.py doctor
+python3 scripts/paper2xhs.py setup
+python3 scripts/paper2xhs.py run fetch -- --count 5 --days 7
+python3 scripts/paper2xhs.py prepare
 ```
 
-<details>
-<summary><strong>📋 依赖详情</strong></summary>
-<br>
+`prepare` 从已有候选中选题并输出草稿路径，不会发布。`--count` 是每个搜索关键词的召回数量，不是最终论文总数。如果 `python3` 低于 3.10，请改用已安装的新版解释器，例如 `python3.12`。
 
-| 包 | 用途 |
+私有工作目录默认为 `~/.local/share/paper2xhs/`：
+
+| 位置 | 内容 |
 |---|---|
-| `xhs` | 小红书 API 客户端 |
-| `xhshow` | 实时请求签名（修复 xhs 内置过时签名） |
-| `PyMuPDF` | PDF 首页转图片 |
-| `requests` | HTTP 请求 |
-| `arxiv` | arXiv 论文元数据 |
+| `app/references/` | 候选论文和草稿 |
+| `app/assets/covers/` | 论文首页封面 |
+| `data/` | 指标快照、策略权重、报告、决策及发布记录 |
+| `cookie.json` | 配置登录后保存的本地凭证缓存 |
 
-</details>
-
-<div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
-
----
-
-## 🚀 使用方法
-
-完整流程为 4 个必选步骤 + 2 个可选步骤：
-
-**① 获取小红书 Cookie**
-
-登录[小红书创作者中心](https://creator.xiaohongshu.com)，打开浏览器开发者工具 → Application → Cookies → `creator.xiaohongshu.com`，复制 `a1`、`web_session`、`webId` 三个字段。
-
-> ⚠️ **必须使用创作者中心的 Cookie**，普通用户端（`www.xiaohongshu.com`）的 Cookie 无法调用发布接口。
-
-**② 抓取论文**
-
-```bash
-python3 scripts/fetch_papers.py --count 5
-# 结果写入 references/fetched_papers.json
-```
-
-**③ 生成文案**
-
-```bash
-python3 scripts/generate_content.py --arxiv-id 2606.24014
-# 结果写入 references/content_2606_24014.json
-```
-
-**④ 截取封面**
-
-```bash
-python3 scripts/capture_cover.py --arxiv-id 2606.24014
-# 直出 arXiv 论文首页截图，保存到 assets/covers/
-```
-
-**⑤ 发布**
-
-```bash
-# 私密预览（推荐先确认内容）
-python3 scripts/publish_to_xhs.py \
-  --content-json references/content_2606_24014.json \
-  --cookie 'a1=xxx;web_session=xxx;webId=xxx' \
-  --private
-
-# 公开发布
-python3 scripts/publish_to_xhs.py \
-  --content-json references/content_2606_24014.json \
-  --cookie 'a1=xxx;web_session=xxx;webId=xxx'
-```
+通过 `PAPER2XHS_HOME` 修改工作目录，不同账号使用不同目录。`doctor` 展示实际路径而不显示凭证。更新 Skill 会刷新程序文件，保留已有私有数据。
 
 <details>
-<summary><strong>⑥ 定时任务（可选）— 点击展开</strong></summary>
-<br>
+<summary><strong>离线准备与反馈报告</strong></summary>
+
+`setup --skip-deps` 可准备仅使用标准库的工作流，不安装第三方依赖，也不会启用在线发布或 PDF 渲染。
 
 ```bash
-# cron: 每天 10:00 自动发布
-0 10 * * * cd /path/to/repo && XHS_COOKIE='a1=xxx;...' python3 scripts/scheduled_publish.py
+python3 scripts/paper2xhs.py setup --skip-deps
+python3 scripts/paper2xhs.py run feedback -- report
 ```
+
+导入自己的报表时，向 Agent 提供绝对文件路径。先做 dry-run，核对时间、计数口径、账号和字段映射后再写入账本。
 
 </details>
 
-<div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
+## 当前边界
 
----
+| 功能 | 状态 |
+|---|---|
+| 平台在线访问 | 使用非官方适配器，需在用户账号上验证登录、签名兼容性和当前指标字段。 |
+| 发布 | 安装与本地预览不会发布；`--private` 会在平台创建真实的私密笔记。 |
+| 调度 | `run schedule` 可能等待发布时间槽，再发布一篇内容；它不会自动注册周期任务。 |
+| 可选集成 | MCP 需要另行运行服务；旧 `--draft` 模式使用的浏览器 Bridge 未随包提供。 |
+| 高级封面 | 自带论文首页封面；模型生图需要单独配置相应能力。 |
 
-## 🛠️ 命令
+## 文档
 
-<table>
-<tr><th>脚本</th><th>命令</th><th>说明</th></tr>
-<tr><td><code>fetch_papers.py</code></td><td><code>python3 scripts/fetch_papers.py --count N</code></td><td>从 arXiv 抓取 N 篇论文</td></tr>
-<tr><td><code>generate_content.py</code></td><td><code>python3 scripts/generate_content.py --arxiv-id &lt;ID&gt;</code></td><td>生成小红书文案</td></tr>
-<tr><td><code>capture_cover.py</code></td><td><code>python3 scripts/capture_cover.py --arxiv-id &lt;ID&gt;</code></td><td>截取封面图</td></tr>
-<tr><td><code>publish_to_xhs.py</code></td><td><code>python3 scripts/publish_to_xhs.py --content-json &lt;f&gt; --cookie &lt;c&gt;</code></td><td>发布笔记</td></tr>
-<tr><td><code>scheduled_publish.py</code></td><td><code>XHS_COOKIE='...' python3 scripts/scheduled_publish.py</code></td><td>全流程入口</td></tr>
-</table>
+| 文档 | 用途 |
+|---|---|
+| [Skill 指令](SKILL.md) | Agent 入口、支持任务和执行边界 |
+| [内容指南](references/skill-content.md) | 论文证据、中文写作和策略归因 |
+| [运维指南](references/skill-operations.md) | 登录、指标映射、私有存储和调度 |
+| [指标配置示例](examples/creator_metrics.config.example.json) | 核对真实 schema 后建立采集配置 |
+| [测试](tests/) | 快照、策略、发布元数据及隔离安装包验证 |
 
-<div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
+统一入口为 [scripts/paper2xhs.py](scripts/paper2xhs.py)，各功能模块位于 [scripts/](scripts/)。
 
----
+## 参与贡献
 
-## ⚙️ 配置
-
-> 🔒 通过环境变量设置 Cookie，避免 Cookie 暴露在 shell 历史中
+欢迎通过 [Issues](https://github.com/GetIT-Sunday/xhs-rl-paper-share/issues) 提交可复现的问题，或发起 Pull Request。修改平台适配器时，请用脱敏样例说明已验证的字段口径，不附带 Cookie 和真实账号导出数据。
 
 ```bash
-export XHS_COOKIE='a1=xxx;web_session=xxx;webId=xxx'
-python3 scripts/publish_to_xhs.py --content-json references/content_2606_24014.json
+python3 -m unittest discover -s tests -v
+python3 scripts/package_skill.py
 ```
 
-### Cookie 缓存位置
+打包程序使用明确的文件清单生成 `dist/paper2xhs.zip`，排除历史笔记、凭证和运营数据；发布 Release 是维护者单独执行的操作。
 
-`cookie_manager.py` 会把扫码登录得到的 Cookie 缓存下来（文件权限 `600`），路径按以下顺序解析：
+## 许可证
 
-| 环境变量 | 说明 |
-|-|-|
-| `XHS_COOKIE_CACHE` | 缓存文件的完整路径，优先级最高 |
-| `XHS_WORKSPACE` | 指定一个已存在的目录，缓存写入该目录下的 `.xhs_cookie_cache.json` |
-| 均未设置 | 兜底写入 `~/.xhs_cookie_cache.json` |
+旧文档标注 MIT，但当前仓库没有 `LICENSE` 文件。维护者需要确认许可证并补充正文，才能明确项目的授权状态。
 
-### 生图封面（可选）
+## Star history
 
-默认封面是 arXiv 论文首页截图，**不需要任何配置**。加 `--gpt-cover` 可改用生图模型二次创作封面，后端按「外部脚本 → 生图 API」顺序解析，两者都没配置时会自动降级回首页直出：
-
-| 环境变量 | 默认值 | 说明 |
-|-|-|-|
-| `XHS_IMAGE_SCRIPT` | — | 自备生图脚本路径，需接受 `--prompt` / `--image` / `--output` / `--size` 参数 |
-| `XHS_IMAGE_API_KEY` | 回退到 `OPENAI_API_KEY` | 生图服务的 API Key |
-| `XHS_IMAGE_BASE_URL` | `https://api.openai.com/v1` | OpenAI 兼容的 API 地址，可指向任意兼容服务 |
-| `XHS_IMAGE_MODEL` | `gpt-image-1` | 生图模型名 |
-| `XHS_IMAGE_SIZE` | `1024x1536` | 出图尺寸（竖版更适合小红书） |
-
-```bash
-export XHS_IMAGE_API_KEY='sk-xxx'
-export XHS_IMAGE_BASE_URL='https://api.openai.com/v1'
-python3 scripts/capture_cover.py --arxiv-id 2103.04918 --gpt-cover \
-  --title "A Survey of Embodied AI"
-```
-
-走的是 OpenAI 兼容的 `POST {base_url}/images/edits` 图生图接口，以论文首页作为参考图。
-
-<div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
-
----
-
-## 🌿 分支说明
-
-<table>
-<tr>
-<th width="50%">🌍 <code>main</code> — 通用版</th>
-<th width="50%">🤖 <code>dodo</code> — dodo 集成版</th>
-</tr>
-<tr>
-<td valign="top">
-
-纯 Python，只依赖公开 PyPI 包，可在任意环境独立运行。
-
-- ✅ 零平台锁定
-- ✅ 适用于任意 Python 3.8+ 环境
-- ✅ 依赖面最小
-- ✅ 生图封面可自带 API Key（OpenAI 兼容接口）
-
-</td>
-<td valign="top">
-
-包含 `main` 的全部能力，并集成 dodo AI Agent 平台。
-
-- ✅ dodo Skill 协议（`SKILL.md`）
-- ✅ 复用 dodo 的 GPT Image 技能生成封面（无需自备 Key）
-- ✅ `arxiv-paper-reader` 论文精读报告
-
-</td>
-</tr>
-</table>
-
-<div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
-
----
-
-## 📁 目录结构
-
-```
-xhs-rl-paper-share/
-├── scripts/
-│   ├── fetch_papers.py        # 从 arXiv 抓取论文
-│   ├── generate_content.py    # 生成小红书文案
-│   ├── capture_cover.py       # 截取封面
-│   ├── publish_to_xhs.py      # 发布到小红书
-│   ├── cookie_manager.py      # Cookie 管理
-│   └── scheduled_publish.py   # 定时发布入口
-├── references/
-│   ├── fetched_papers.json    # 抓取到的论文列表
-│   ├── published_papers.json  # 已发布记录（初始为空）
-│   ├── publish_state.json     # 发布状态
-│   ├── paper_template.md      # 文案模板说明
-│   └── xhs_style_guide.md     # 小红书风格指南
-├── assets/
-│   └── covers/                # 封面图（运行时生成，已 .gitignore）
-├── .gitignore
-├── README.md                  # English
-└── README_ZH.md               # 中文文档（本文件）
-```
-
-<div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
-
----
-
-## ⚠️ 注意事项
-
-<details open>
-<summary><strong>🔒 Cookie 安全</strong></summary>
-<br>
-
-`web_session` 是登录凭证，切勿提交到版本控制。
-
-</details>
-
-<details>
-<summary><strong>📊 发布频率</strong></summary>
-<br>
-
-建议每天不超过 3 篇，避免触发小红书风控。
-
-</details>
-
-<details>
-<summary><strong>⏰ Cookie 时效</strong></summary>
-<br>
-
-创作者中心 Cookie 约 30 天有效，过期需重新获取。
-
-</details>
-
-<details>
-<summary><strong>✍️ 签名说明</strong></summary>
-<br>
-
-`xhs` 内置旧版签名已被风控识别，本项目已 monkey-patch 为 `xhshow` 实时签名。
-
-</details>
-
-<div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
-
----
-
-## 🤝 贡献
-
-欢迎贡献代码，让开源社区更加精彩！你的每一份贡献都备受感谢。
-
-1. Fork 本项目
-2. 创建你的功能分支（`git checkout -b feature/AmazingFeature`）
-3. 提交你的更改（`git commit -m 'Add some AmazingFeature'`）
-4. 推送到分支（`git push origin feature/AmazingFeature`）
-5. 提交一个 Pull Request
-
-如果这个项目对你有帮助，别忘了给它点个 ⭐！
-
-<div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
-
----
-
-## 📄 许可证
-
-基于 **MIT License** 分发。详见 [LICENSE](LICENSE)。
-
-<div align="right"><a href="#xhs-rl-paper-share">↑ 回到顶部</a></div>
-
----
-
-<p align="center">
-  <sub>如果这个项目为你节省了时间，欢迎点个 ⭐ —— 这也能帮助更多人发现它。</sub>
-</p>
-
-<p align="center">
-  <a href="https://star-history.com/#GetIT-Sunday/xhs-rl-paper-share&Date">
-    <img src="https://api.star-history.com/svg?repos=GetIT-Sunday/xhs-rl-paper-share&type=Date" alt="Star History Chart" width="600">
-  </a>
-</p>
+[![Star History](https://api.star-history.com/svg?repos=GetIT-Sunday/xhs-rl-paper-share&type=Date)](https://star-history.com/#GetIT-Sunday/xhs-rl-paper-share&Date)

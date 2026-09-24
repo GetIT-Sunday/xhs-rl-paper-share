@@ -20,15 +20,20 @@
 """
 
 import json
+import os
 import sys
 import time
 import subprocess
 from datetime import datetime, date
 from pathlib import Path
 
+from feedback import DATA_DIR, atomic_text, utcnow
+from paper_pipeline import rank_papers, load_strategy_policy, strategy_weights_path, build_evidence_pack
+from publication_store import load_published, paper_id
+from generate_content import generate_content
+
 BASE_DIR = Path(__file__).parent.parent
-STATE_PATH = BASE_DIR / "references" / "publish_state.json"
-PUBLISHED_PATH = BASE_DIR / "references" / "published_papers.json"
+STATE_PATH = DATA_DIR / "publish_state.json"
 SKILL_DIR = BASE_DIR
 
 # 时间槽序列：9点到22点，共14个槽
@@ -46,7 +51,7 @@ def load_state() -> dict:
 
 def save_state(slot_index: int, published_date: str):
     state = {"slot_index": slot_index, "last_published_date": published_date}
-    STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2))
+    atomic_text(STATE_PATH, json.dumps(state, ensure_ascii=False, indent=2))
     print(f"✅ 状态已保存: slot={slot_index}({SLOT_HOURS[slot_index]}点), date={published_date}")
 
 
@@ -83,41 +88,71 @@ def wait_until_hour(target_hour: int):
     print(f"⏰ 已到达目标时间 {target_hour}:00，开始发布")
 
 
+def prepare_next_content(base_dir=BASE_DIR, data_dir=DATA_DIR):
+    """Rerank cached AND newly fetched papers; preserve externally authored text."""
+    reference = base_dir / "references"
+    published = {paper_id(p.get("arxiv_id")) for p in load_published()["published"]}
+    policy = load_strategy_policy(data_dir / "strategy_weights.json")
+    papers, drafts = {}, {}
+    fetched = reference / "fetched_papers.json"
+    if fetched.exists():
+        for p in json.loads(fetched.read_text()).get("papers", []):
+            papers[paper_id(p.get("arxiv_id"))] = p
+    for cf in sorted(reference.glob("content_*.json")):
+        try:
+            d = json.loads(cf.read_text())
+            key = paper_id(d.get("arxiv_id"))
+            if not key:
+                continue
+            drafts[key] = (cf, d)
+            papers.setdefault(key, {"arxiv_id": d["arxiv_id"], "title": d.get("original_title", ""),
+                                    "summary": d.get("abstract", ""), "categories": d.get("categories", [])})
+        except (OSError, ValueError, KeyError):
+            continue
+    candidates = [p for key, p in papers.items() if key and key not in published]
+    ranked = rank_papers(candidates, published, policy["weights"])
+    if not ranked:
+        return None
+    selected = ranked[0]
+    key = paper_id(selected["arxiv_id"])
+    cached_path, cached = drafts.get(key, (None, {}))
+    # Existing manually edited/older drafts are immutable. Their selection still
+    # uses current ranking, but their style attribution must stay historical.
+    if cached_path and cached.get("generator") != "paper2xhs_template_v2":
+        target = cached_path
+        strategy = cached.get("selected_strategy")
+        content_policy = cached.get("policy_version")
+    else:
+        evidence = data_dir / ("evidence_" + key.replace(".", "_").replace("/", "_") + ".json")
+        build_evidence_pack(selected, evidence)
+        content = generate_content(selected, evidence, policy["weights"])
+        content.update(policy_version=policy["version"], policy_updated_at=policy["updated_at"],
+                       selection_score=selected["selection_score"])
+        target = data_dir / ("content_" + key.replace(".", "_").replace("/", "_") + ".json")
+        atomic_text(target, json.dumps(content, ensure_ascii=False, indent=2))
+        strategy = content["selected_strategy"]
+        content_policy = policy["version"]
+    audit = {"at": utcnow(), "policy_version": policy["version"], "content_policy_version": content_policy,
+             "selected_arxiv_id": selected["arxiv_id"], "selected_strategy": strategy,
+             "candidate_scores": [{"arxiv_id": p["arxiv_id"], **p["selection_score"]} for p in ranked]}
+    atomic_text(data_dir / "last_decision.json", json.dumps(audit, ensure_ascii=False, indent=2))
+    return target
+
+
 def run_publish() -> bool:
     """执行完整发布流程，返回是否成功"""
     print("\n" + "=" * 60)
     print("🚀 开始执行发布流程")
     print("=" * 60)
 
-    # 调用 xhs-rl-paper-share skill 的主流程
-    # 使用 publish_to_xhs.py，不传 cookie（自动从 cookie_manager 读取）
-    # 先找一篇未发布的论文
-    published_ids = set()
-    if PUBLISHED_PATH.exists():
-        data = json.loads(PUBLISHED_PATH.read_text())
-        published_ids = {p["arxiv_id"] for p in data.get("published", [])}
-
-    # 检查是否有预先缓存的待发文案
-    content_files = sorted(
-        (BASE_DIR / "references").glob("content_*.json"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
-
-    target_content = None
-    for cf in content_files:
-        try:
-            d = json.loads(cf.read_text())
-            arxiv_id = d.get("arxiv_id", "")
-            if arxiv_id and arxiv_id not in published_ids:
-                target_content = cf
-                print(f"📄 找到待发文案: {cf.name} (arXiv: {arxiv_id})")
-                break
-        except Exception:
-            continue
-
+    try:
+        subprocess.run([sys.executable, str(BASE_DIR / "scripts" / "fetch_papers.py"), "--count", "3"],
+                       timeout=600, check=False)
+    except (subprocess.TimeoutExpired, OSError):
+        print("⚠️ 抓取失败，使用已有候选")
+    target_content = prepare_next_content()
     if target_content is None:
-        print("❌ 没有找到待发文案，请先运行一次手动发布以生成文案缓存")
+        print("❌ 没有候选论文")
         return False
 
     cmd = [
@@ -131,6 +166,28 @@ def run_publish() -> bool:
     print(f"执行: {' '.join(cmd)}")
     result = subprocess.run(cmd, timeout=120)
     return result.returncode == 0
+
+
+def refresh_feedback() -> bool:
+    """Refresh private snapshots; a failed refresh keeps the previous policy."""
+    endpoint = os.environ.get("XHS_METRICS_ENDPOINT")
+    creator = os.environ.get("XHS_METRICS_MODE") == "creator"
+    if not endpoint and not creator:
+        return True
+    collector = BASE_DIR / "scripts" / "collect_metrics.py"
+    print("📊 刷新创作者中心指标快照")
+    cmd = [sys.executable, str(collector)]
+    if creator:
+        cmd.append("--creator")
+    try:
+        result = subprocess.run(cmd, timeout=90, check=False)
+    except subprocess.TimeoutExpired:
+        print("⚠️ 指标采集超时，继续使用上一版策略")
+        return False
+    if result.returncode != 0:
+        print("⚠️ 指标采集失败，继续使用上一版策略")
+        return False
+    return True
 
 
 def main():
@@ -148,6 +205,7 @@ def main():
 
     wait_until_hour(target_hour)
 
+    refresh_feedback()
     success = run_publish()
 
     if success:

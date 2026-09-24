@@ -14,6 +14,10 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
+sys.path.insert(0, str(Path(__file__).parent))
+from paper_pipeline import build_evidence_pack, infer_strategy_tags as infer_pipeline_tags, load_strategy_policy, strategy_weights_path, PRIOR_STRATEGY_SCORE
+from evidence_check import validate_content
+
 # 小红书爆款文案模板
 TEMPLATE = """{title_intro}
 
@@ -121,7 +125,18 @@ def generate_tags(paper_summary):
     return " ".join(base_tags)
 
 
-def generate_content(paper_data):
+def infer_strategy_tags(title: str, summary: str):
+    return infer_pipeline_tags(f"{title} {summary}")
+
+
+def select_strategy(tags, weights):
+    """Choose the highest-posterior applicable style without fabricating a claim."""
+    if not tags or not any(tag in weights for tag in tags):
+        return "abstract_explainer"
+    return max(tags, key=lambda tag: (weights.get(tag, PRIOR_STRATEGY_SCORE), tag == "abstract_explainer"))
+
+
+def generate_content(paper_data, evidence_pack=None, strategy_weights=None):
     """生成完整的小红书文案"""
     title = paper_data["title"]
     summary = paper_data["summary"]
@@ -129,7 +144,17 @@ def generate_content(paper_data):
     
     # 生成各部分
     xhs_title = generate_title(title, summary)
-    intro_sentence = INTRO_SENTENCES[0]  # 可随机选择
+    strategy_weights = strategy_weights or {}
+    strategy_tags = infer_strategy_tags(title, summary)
+    selected_strategy = select_strategy(strategy_tags, strategy_weights)
+    intro_by_strategy = {
+        "counterintuitive": "阅读视角：哪些结果可能与直觉不同？从摘要找线索：",
+        "cross_domain_analogy": "阅读视角：文中借鉴了哪些思路？类比的适用边界是什么？",
+        "formula_breakdown": "阅读视角：优化目标是什么？先从摘要理解问题，再核对原文公式：",
+        "hot_topic": "阅读视角：这项工作与当前研究方向有什么关联？先看摘要：",
+        "abstract_explainer": INTRO_SENTENCES[0],
+    }
+    intro_sentence = intro_by_strategy.get(selected_strategy, INTRO_SENTENCES[0])
     content_para = generate_content_paragraph(title, summary)
     tags = generate_tags(summary)
     
@@ -142,7 +167,7 @@ def generate_content(paper_data):
         tags=tags
     )
     
-    return {
+    result = {
         "xhs_title": xhs_title,
         "xhs_content": content,
         "arxiv_id": arxiv_id,
@@ -151,6 +176,16 @@ def generate_content(paper_data):
         "categories": paper_data.get("categories", ["cs.LG"]),
         "generated_at": datetime.now().isoformat()
     }
+    result["candidate_strategy_tags"] = strategy_tags
+    result["strategy_tags"] = [selected_strategy]
+    result["generator"] = "paper2xhs_template_v2"
+    result["strategy_selection_reason"] = "highest_applicable_posterior" if strategy_weights else "cold_start"
+    result["selected_strategy"] = selected_strategy
+    result["strategy_weights_snapshot"] = strategy_weights
+    if evidence_pack is not None:
+        result["evidence_pack"] = str(evidence_pack)
+        result["evidence_validation"] = validate_content(result, json.loads(Path(evidence_pack).read_text()))
+    return result
 
 
 def main():
@@ -158,6 +193,8 @@ def main():
     parser.add_argument("--arxiv-id", help="arXiv 论文 ID")
     parser.add_argument("--paper-json", help="论文 JSON 文件路径")
     parser.add_argument("--output", default=None, help="输出文件路径")
+    parser.add_argument("--evidence-pack", default=None, help="Evidence Pack 输出路径")
+    parser.add_argument("--strategy-weights", default=None, help="策略后验权重 JSON")
     args = parser.parse_args()
     
     # 读取论文数据
@@ -187,7 +224,13 @@ def main():
         sys.exit(1)
     
     # 生成文案
-    result = generate_content(paper_data)
+    evidence_path = Path(args.evidence_pack) if args.evidence_pack else Path(__file__).parent.parent / "references" / f"evidence_{paper_data['arxiv_id'].replace('.', '_')}.json"
+    build_evidence_pack(paper_data, evidence_path)
+    weights_path = Path(args.strategy_weights) if args.strategy_weights else strategy_weights_path()
+    policy = load_strategy_policy(weights_path)
+    result = generate_content(paper_data, evidence_path, policy["weights"])
+    result["policy_version"] = policy["version"]
+    result["policy_updated_at"] = policy["updated_at"]
     
     # 输出
     print("=" * 60)

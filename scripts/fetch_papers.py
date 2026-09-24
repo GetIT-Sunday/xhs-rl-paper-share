@@ -15,6 +15,11 @@ from datetime import datetime, timedelta
 import urllib.request
 import urllib.parse
 import time
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent))
+from paper_pipeline import load_strategy_policy, rank_papers, strategy_weights_path
+from publication_store import load_published, paper_id
 
 # RL 相关搜索关键词
 RL_KEYWORDS = [
@@ -33,28 +38,19 @@ RL_KEYWORDS = [
     "model-based RL",
 ]
 
-# 已发布论文列表路径
-PUBLISHED_PATH = Path(__file__).parent.parent / "references" / "published_papers.json"
-
-
 def load_published_ids():
-    """加载已发布论文 ID 列表"""
-    if not PUBLISHED_PATH.exists():
-        return set()
-    with open(PUBLISHED_PATH, "r") as f:
-        data = json.load(f)
-    return {item["arxiv_id"] for item in data.get("published", [])}
+    return {paper_id(item.get("arxiv_id")) for item in load_published()["published"]}
 
 
 def fetch_arxiv_papers(query, max_results=10, days=7):
     """从 arXiv API 抓取论文"""
     # 计算7天前的日期
-    start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=days)).strftime("%Y%m%d")
     
     # 构建 arXiv API URL
-    base_url = "http://export.arxiv.org/api/query?"
+    base_url = "https://export.arxiv.org/api/query?"
     params = {
-        "search_query": f'all:"{query}" AND submittedDate:[{start_date}000000 TO 999999999999]',
+        "search_query": f'all:"{query}" AND submittedDate:[{start_date}0000 TO 999999999999]',
         "start": 0,
         "max_results": max_results,
         "sortBy": "submittedDate",
@@ -121,13 +117,18 @@ def main():
     for keyword in RL_KEYWORDS:
         papers = fetch_arxiv_papers(keyword, max_results=args.count, days=args.days)
         for paper in papers:
-            if paper["arxiv_id"] not in seen_ids and paper["arxiv_id"] not in published_ids:
+            if paper_id(paper["arxiv_id"]) not in seen_ids and paper_id(paper["arxiv_id"]) not in published_ids:
                 all_papers.append(paper)
-                seen_ids.add(paper["arxiv_id"])
+                seen_ids.add(paper_id(paper["arxiv_id"]))
         time.sleep(3)  # 避免请求过快
     
     # 去重并按日期排序
-    all_papers.sort(key=lambda x: x["published"], reverse=True)
+    # Rank by relevance, freshness, evidence availability and novelty.  The
+    # component scores are persisted with each candidate for auditability.
+    weights_path = strategy_weights_path()
+    policy = load_strategy_policy(weights_path)
+    strategy_weights = policy["weights"]
+    all_papers = rank_papers(all_papers, published_ids, strategy_weights)
     
     print(f"\n✅ 共找到 {len(all_papers)} 篇未发布的 RL 论文")
     
@@ -135,7 +136,7 @@ def main():
     output_path = args.output or str(Path(__file__).parent.parent / "references" / "fetched_papers.json")
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
-        json.dump({"fetched_at": datetime.now().isoformat(), "papers": all_papers}, f, ensure_ascii=False, indent=2)
+        json.dump({"fetched_at": datetime.now().isoformat(), "ranking": "paper_pipeline.score_paper", "policy_version": policy["version"], "papers": all_papers}, f, ensure_ascii=False, indent=2)
     
     print(f"💾 已保存到: {output_path}")
     
@@ -145,6 +146,7 @@ def main():
         print(f"  ID: {paper['arxiv_id']}")
         print(f"  标题: {paper['title'][:80]}")
         print(f"  日期: {paper['published']}")
+        print(f"  选题分: {paper['selection_score']['total']:.3f}")
         print(f"  作者: {', '.join(paper['authors'][:3])}{'...' if len(paper['authors']) > 3 else ''}")
 
 

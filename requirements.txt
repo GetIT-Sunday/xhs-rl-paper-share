@@ -1,0 +1,9 @@
+# Online publishing / collection adapter. Platform compatibility requires live verification.
+xhs==0.2.13
+xhshow
+# PDF covers and optional composition
+PyMuPDF
+Pillow
+requests
+arxiv
+qrcode

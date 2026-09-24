@@ -268,4 +268,4 @@ if __name__ == "__main__":
         sys.exit(0)
 
     cookie = get_valid_cookie(force_refresh=args.refresh)
-    print(f"\nCookie: {cookie[:40]}...")
+    print("登录凭证已保存在本机缓存中。")

@@ -1,0 +1,21 @@
+{
+  "source_id": "creator_center_example_unverified",
+  "counter_scope": "unknown",
+  "rows_path": "data.items",
+  "has_more_path": "data.has_more",
+  "fields": {
+    "note_id": "note_id",
+    "impressions": "impressions",
+    "views": "views",
+    "likes": "likes",
+    "saves": "saves",
+    "comments": "comments",
+    "shares": "shares",
+    "new_followers": "new_followers",
+    "published_at": "published_at",
+    "selected_strategy": "selected_strategy"
+  },
+  "published_time_unit": "seconds",
+  "horizon_hours": 24,
+  "tolerance_hours": 6
+}
