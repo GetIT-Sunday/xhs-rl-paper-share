@@ -1,271 +1,193 @@
 #!/usr/bin/env python3
-"""
-XHS Cookie 管理器 —— QR 码登录 + 本地缓存
+"""XHS QR login with private storage and authenticated account verification."""
+from __future__ import annotations
 
-使用方式：
-  # 获取有效 Cookie（自动从缓存读取，失效则重新扫码）
-  from cookie_manager import get_valid_cookie
-  cookie_str = get_valid_cookie()
-
-  # 强制重新扫码
-  from cookie_manager import login_by_qrcode
-  cookie_str = login_by_qrcode()
-"""
-
-import json
+import io
 import os
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
+import uuid
+from urllib.parse import urlsplit, parse_qsl
 
-try:
-    from xhs import XhsClient
-    from xhshow import Xhshow
-    _HAS_XHS = True
-except ImportError:
-    _HAS_XHS = False
-
-# Cookie 缓存路径解析顺序：
-#   1. 环境变量 XHS_COOKIE_CACHE 指定的完整文件路径
-#   2. 环境变量 XHS_WORKSPACE 指定目录下的 .xhs_cookie_cache.json
-#   3. 用户 home 下的 ~/.xhs_cookie_cache.json
-_HOME_CACHE = Path.home() / ".xhs_cookie_cache.json"
+from account_state import current_cookie, home_path, private_json, read_json
 
 
-def _get_cache_path() -> Path:
-    """返回可写的 Cookie 缓存路径"""
-    explicit = os.environ.get("XHS_COOKIE_CACHE", "").strip()
+class LoginError(ValueError):
+    """Only fixed, credential-free messages may cross the UI boundary."""
+
+
+def _get_cache_path():
+    explicit = os.environ.get('XHS_COOKIE_CACHE')
     if explicit:
         return Path(explicit).expanduser()
-
-    workspace = os.environ.get("XHS_WORKSPACE", "").strip()
-    if workspace:
-        workspace_dir = Path(workspace).expanduser()
-        if workspace_dir.is_dir():
-            return workspace_dir / ".xhs_cookie_cache.json"
-
-    return _HOME_CACHE
+    if os.environ.get('XHS_WORKSPACE'):
+        return Path(os.environ['XHS_WORKSPACE']).expanduser() / '.xhs_cookie_cache.json'
+    if os.environ.get('PAPER2XHS_HOME'):
+        return home_path() / 'cookie.json'
+    return Path.home() / '.xhs_cookie_cache.json'
 
 
 COOKIE_CACHE_PATH = _get_cache_path()
 
 
-def _make_client(cookie_str: str = "") -> "XhsClient":
-    """创建带签名的 XhsClient"""
-    if not _HAS_XHS:
-        print("❌ 请先安装依赖：pip install xhs xhshow", file=sys.stderr)
-        sys.exit(1)
-    cookie = {}
-    for item in cookie_str.split(";"):
-        item = item.strip()
-        if "=" in item:
-            k, v = item.split("=", 1)
-            cookie[k.strip()] = v.strip()
-    signer = Xhshow()
-
-    def sign_func(url, data, a1=None, web_session=None):
-        return signer.sign_headers_post(
-            uri=url,
-            cookies=cookie,
-            payload=data if data else {},
-            x_rap=True,
-        )
-
-    return XhsClient(cookie=cookie_str, sign=sign_func)
-
-
-def _validate_cookie(cookie_str: str) -> bool:
-    """验证 Cookie 是否有效（调一个轻量接口）"""
+def _make_client(cookie_str=''):
     try:
-        client = _make_client(cookie_str)
-        # 调用一个轻量只读接口验证登录态
-        result = client.get_emojis()
+        from xhs import XhsClient
+        from xhshow import Xhshow
+    except ImportError:
+        raise LoginError('登录依赖尚未就绪，请让 Agent 完成 setup 后重试。') from None
+
+    class QuietClient(XhsClient):
+        # xhs 0.2.13 prints every raw response (including login sessions).
+        # Override the transport instead of globally redirecting threaded stdout.
+        def request(self, method, url, **kwargs):
+            try:
+                response = self.session.request(method, url, timeout=self.timeout,
+                                                proxies=self.proxies, **kwargs)
+            except Exception:
+                raise LoginError('连接小红书超时或网络不可达，请稍后重试。') from None
+            if response.status_code in (461, 471):
+                raise LoginError('平台要求验证，请在小红书官方页面完成验证后重试。')
+            if response.status_code == 429:
+                raise LoginError('平台请求频率受限，请稍后重试。')
+            if response.status_code >= 500:
+                raise LoginError('小红书服务暂时不可用，请稍后重试。')
+            # Image uploads return an empty body or XML, not the web API envelope.
+            if urlsplit(url).hostname == 'ros-upload.xiaohongshu.com':
+                if 200 <= response.status_code < 300:
+                    return response
+                raise LoginError('图片上传失败，请稍后重试。')
+            try:
+                data = response.json()
+            except ValueError:
+                raise LoginError('平台返回非 JSON 响应，当前接口可能不可用。') from None
+            if not isinstance(data, dict) or not data.get('success'):
+                raise LoginError('平台拒绝请求，可能需要重新登录或更新接口适配。')
+            return data.get('data', True)
+
+    signer = Xhshow()
+    client = None
+
+    def sign_func(url, data=None, **kwargs):
+        cookies = client.cookie_dict
+        if data is None:
+            parsed = urlsplit(url)
+            return signer.sign_headers_get(uri=parsed.path, cookies=cookies,
+                                           params=dict(parse_qsl(parsed.query)), x_rap=True)
+        return signer.sign_headers_post(uri=url, cookies=cookies, payload=data, x_rap=True)
+
+    client = QuietClient(cookie=cookie_str, sign=sign_func, timeout=12)
+    return client
+
+
+def verify_account(cookie_str):
+    if not cookie_str:
+        raise LoginError('尚未登录，请先扫码。')
+    result = _make_client(cookie_str).get_self_info2()
+    # v2 /user/me is authenticated self identity; never use public profile lookup.
+    if not isinstance(result, dict) or result.get('guest') or result.get('is_guest'):
+        raise LoginError('平台未返回已登录用户，请重新扫码。')
+    account_id = result.get('user_id')
+    nickname = result.get('nickname')
+    if not isinstance(account_id, str) or not account_id or not isinstance(nickname, str) or not nickname:
+        raise LoginError('登录账号字段无法核实，请更新接口适配；不会继续发布。')
+    avatar = result.get('images') or result.get('image') or result.get('avatar') or ''
+    if not isinstance(avatar, str) or not avatar.startswith('https://'):
+        avatar = ''
+    return {'account_id': account_id, 'nickname': nickname, 'avatar': avatar,
+            'verified_at': time.time(), 'login_verified': True}
+
+
+def _validate_cookie(cookie_str):
+    try:
+        verify_account(cookie_str)
         return True
     except Exception:
         return False
 
 
-def _load_cache() -> dict:
-    """读取本地 Cookie 缓存"""
-    if not COOKIE_CACHE_PATH.exists():
-        return {}
-    try:
-        with open(COOKIE_CACHE_PATH, "r") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+def _load_cache():
+    return read_json(COOKIE_CACHE_PATH)
 
 
-def _save_cache(cookie_str: str, login_time: float):
-    """保存 Cookie 到本地文件"""
-    data = {
-        "cookie": cookie_str,
-        "login_time": login_time,
-        "note": "XHS Web Cookie 缓存，约 30 天有效，失效后自动重新扫码",
-    }
-    COOKIE_CACHE_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2))
-    # 限制只有当前用户可读
-    COOKIE_CACHE_PATH.chmod(0o600)
-    print(f"✅ Cookie 已缓存到 {COOKIE_CACHE_PATH}")
+def _save_cache(cookie_str, login_time):
+    private_json(COOKIE_CACHE_PATH, {'cookie': cookie_str, 'login_time': login_time})
 
 
-def _qrcode_to_terminal(url: str):
-    """在终端打印 QR 码"""
-    try:
+class QRLogin:
+    def __init__(self):
+        self.a1 = uuid.uuid4().hex + uuid.uuid4().hex[:14]
+        self.client = _make_client(f'a1={self.a1}')
+        self.qr = self.client.get_qrcode()
+        if not isinstance(self.qr, dict) or not all(self.qr.get(k) for k in ('qr_id', 'code', 'url')):
+            raise LoginError('平台未返回有效二维码，请稍后重试。')
+        self.deadline = time.time() + 120
+
+    def image(self):
         import qrcode
-        qr = qrcode.QRCode(border=1)
-        qr.add_data(url)
-        qr.make(fit=True)
-        qr.print_ascii(invert=True)
-        return
-    except ImportError:
-        pass
+        output = io.BytesIO()
+        qrcode.make(self.qr['url']).save(output, format='PNG')
+        return output.getvalue()
 
-    try:
-        import segno
-        qr = segno.make(url)
-        qr.terminal(compact=True)
-        return
-    except ImportError:
-        pass
-
-    # 两个库都没有，用 qr 命令行工具
-    result = os.system(f"command -v qr > /dev/null 2>&1 && qr '{url}'")
-    if result == 0:
-        return
-
-    # 最后兜底：只打印 URL 让用户手动生成
-    print(f"\n📱 请用手机浏览器打开以下链接，或将链接转为二维码后扫描：")
-    print(f"   {url}\n")
-    print("💡 提示：也可以在浏览器地址栏输入 https://www.xiaohongshu.com 扫码登录后，")
-    print("         把 a1、web_session、webId Cookie 值告诉我直接使用。")
+    def poll(self):
+        if time.time() >= self.deadline:
+            raise LoginError('二维码已过期，请重新生成。')
+        result = self.client.check_qrcode(qr_id=self.qr['qr_id'], code=self.qr['code'])
+        if not isinstance(result, dict):
+            raise LoginError('平台返回未知扫码状态，请重新生成二维码。')
+        status = result.get('code_status', 0)
+        if status == 2:
+            info = result.get('login_info') or {}
+            # Bind to server-issued session; never treat the QR's user_id as verified identity.
+            session = info.get('web_session') or info.get('secure_session') or info.get('session')
+            if not isinstance(session, str) or not session or any(c in session for c in ';\r\n'):
+                raise LoginError('扫码完成，但平台未返回可用登录凭证。')
+            self.client.session.cookies.set('web_session', session)
+            return 'logged_in', self.client.cookie
+        if status not in (0, 1):
+            raise LoginError('二维码已失效，请重新生成。')
+        return ('scanned' if status == 1 else 'waiting'), None
 
 
-def login_by_qrcode() -> str:
-    """通过扫码登录，返回 Cookie 字符串"""
-    if not _HAS_XHS:
-        print("❌ 请先安装依赖：pip install xhs xhshow", file=sys.stderr)
-        sys.exit(1)
-
-    # 创建一个无 cookie 的临时客户端用于登录流程
-    # 注：签名库要求 cookies 中必须包含 a1（设备指纹），登录前尚无真实 a1，
-    # 这里生成一个符合格式的临时值仅用于请求签名，不影响后续真实登录态获取
-    import uuid
-    _tmp_a1 = uuid.uuid4().hex + uuid.uuid4().hex[:14]
-    signer = Xhshow()
-    dummy_client = XhsClient(cookie=f"a1={_tmp_a1}", sign=lambda url, data, **kw: signer.sign_headers_post(
-        uri=url, cookies={"a1": _tmp_a1}, payload=data if data else {}, x_rap=True
-    ))
-
-    print("\n🔑 需要登录小红书，正在生成二维码...")
-    try:
-        qr_resp = dummy_client.get_qrcode()
-    except Exception as e:
-        print(f"❌ 获取二维码失败: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    qr_id = qr_resp.get("qr_id")
-    code = qr_resp.get("code")
-    qr_url = qr_resp.get("url", "")
-
-    print("\n" + "=" * 50)
-    print("请用小红书 App 扫描以下二维码登录：")
-    print("=" * 50)
-    _qrcode_to_terminal(qr_url)
-    print("=" * 50)
-    print("等待扫码中...")
-
-    # 轮询登录状态（最多等 120 秒）
-    deadline = time.time() + 120
-    while time.time() < deadline:
+def login_by_qrcode():
+    login = QRLogin()
+    import qrcode
+    qr = qrcode.QRCode(border=1)
+    qr.add_data(login.qr['url'])
+    qr.print_ascii(invert=True)
+    print('请用小红书 App 扫码并在手机上确认。')
+    while time.time() < login.deadline:
         time.sleep(2)
-        try:
-            status_resp = dummy_client.check_qrcode(qr_id=qr_id, code=code)
-        except Exception:
-            continue
-
-        login_status = status_resp.get("code_status", 0)
-        # code_status: 0=待扫码, 1=已扫码待确认, 2=已确认
-        if login_status == 1:
-            print("📱 已扫码，请在手机上确认登录...")
-        elif login_status == 2:
-            # 登录成功，提取 Cookie
-            # 注：当前 xhs 库返回的 login_info 字段为 session/secure_session/user_id，
-            # 而非旧版预期的 web_session/web_id，这里做兼容映射；
-            # a1 复用登录前生成的设备指纹（登录成功后服务端会绑定该 a1）
-            login_info = status_resp.get("login_info", {})
-            web_session = login_info.get("web_session", "") or login_info.get("secure_session", "")
-            web_id = login_info.get("web_id", "") or login_info.get("user_id", "")
-
-            if not web_session:
-                print("❌ 登录成功但未获取到 web_session", file=sys.stderr)
-                sys.exit(1)
-
-            cookie_str = f"a1={_tmp_a1};web_session={web_session};webId={web_id}"
-            print(f"\n✅ 登录成功！")
-            login_time = time.time()
-            _save_cache(cookie_str, login_time)
-            return cookie_str
-
-    print("❌ 扫码超时（120秒），请重试", file=sys.stderr)
-    sys.exit(1)
+        state, cookie = login.poll()
+        if cookie:
+            _save_cache(cookie, time.time())
+            account = verify_account(cookie)
+            print(f"已核实登录账号：{account['nickname']}（{account['account_id']}）。发布前请运行 configure 确认账号。")
+            return cookie
+    raise LoginError('扫码超时，请重新生成二维码。')
 
 
-def get_valid_cookie(force_refresh: bool = False) -> str:
-    """
-    获取有效的 XHS Cookie。
-
-    策略：
-    1. 读本地缓存
-    2. 验证是否有效
-    3. 有效 → 直接返回
-    4. 失效 → 扫码重新登录
-
-    Args:
-        force_refresh: 强制重新扫码（忽略缓存）
-    """
-    if not force_refresh:
-        cache = _load_cache()
-        cookie_str = cache.get("cookie", "")
-
-        if cookie_str:
-            login_time = cache.get("login_time", 0)
-            age_days = (time.time() - login_time) / 86400
-            print(f"📂 读取缓存 Cookie（已缓存 {age_days:.1f} 天）...")
-
-            # 超过 25 天主动提示续期（但不强制，先验证）
-            if age_days > 25:
-                print(f"⚠️  Cookie 已缓存 {age_days:.0f} 天，即将过期，正在验证...")
-
-            if _validate_cookie(cookie_str):
-                print("✅ Cookie 有效，直接使用")
-                return cookie_str
-            else:
-                print("⚠️  缓存 Cookie 已失效，需要重新登录")
-
+def get_valid_cookie(force_refresh=False):
+    cookie = current_cookie(COOKIE_CACHE_PATH)
+    if not force_refresh and _validate_cookie(cookie):
+        return cookie
     return login_by_qrcode()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description="XHS Cookie 管理器")
-    parser.add_argument("--refresh", action="store_true", help="强制重新扫码登录")
-    parser.add_argument("--validate", action="store_true", help="只验证当前 Cookie 是否有效")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--refresh', action='store_true')
+    parser.add_argument('--validate', action='store_true')
     args = parser.parse_args()
-
-    if args.validate:
-        cache = _load_cache()
-        cookie_str = cache.get("cookie", "")
-        if not cookie_str:
-            print("❌ 本地无 Cookie 缓存")
-            sys.exit(1)
-        if _validate_cookie(cookie_str):
-            login_time = cache.get("login_time", 0)
-            age_days = (time.time() - login_time) / 86400
-            print(f"✅ Cookie 有效（已缓存 {age_days:.1f} 天）")
+    try:
+        if args.validate:
+            account = verify_account(current_cookie(COOKIE_CACHE_PATH))
+            print(f"已核实账号：{account['nickname']}（{account['account_id']}）")
         else:
-            print("❌ Cookie 已失效")
+            get_valid_cookie(args.refresh)
         sys.exit(0)
-
-    cookie = get_valid_cookie(force_refresh=args.refresh)
-    print("登录凭证已保存在本机缓存中。")
+    except Exception as exc:
+        print(str(exc) if isinstance(exc, LoginError) else '登录未完成，请打开 configure 检查。', file=sys.stderr)
+        sys.exit(1)

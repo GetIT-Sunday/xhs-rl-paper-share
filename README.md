@@ -36,6 +36,11 @@ The Skill guides environment setup, selects a paper, prepares an Evidence Pack, 
 
 **Requirements:** Python 3.10+, macOS/Linux or Windows WSL, and a Skill-capable Agent. Dependency installation and paper retrieval need network access. The GitHub installation prompt requires the Skill files to be available in the remote repository.
 
+
+When login is needed, the Agent opens a local setup page: **check the environment → scan with the Xiaohongshu app → verify the actual nickname and account ID → save and return to chat**. Credentials and account settings stay in your private local workspace. Agents with an embedded browser can show it beside the conversation; other hosts use a local browser. Remote execution requires port forwarding. Drafting needs no login; live metrics mappings still need verification against your account.
+
+You can also ask: `Use $paper2xhs to open the account setup wizard.`
+
 <details>
 <summary><strong>Install manually in Codex</strong></summary>
 
@@ -102,6 +107,7 @@ git clone https://github.com/GetIT-Sunday/xhs-rl-paper-share.git
 cd xhs-rl-paper-share
 python3 scripts/paper2xhs.py doctor
 python3 scripts/paper2xhs.py setup
+python3 scripts/paper2xhs.py configure
 python3 scripts/paper2xhs.py run fetch -- --count 5 --days 7
 python3 scripts/paper2xhs.py prepare
 ```

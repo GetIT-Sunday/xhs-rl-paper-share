@@ -151,6 +151,15 @@ def collect(source=None, snapshots=DEFAULT_METRICS, weights=DEFAULT_WEIGHTS, coo
     config = config or {}
     if not account_id:
         raise CollectionError('需要 account_id，用于隔离账号数据')
+    online = creator or (source and urllib.parse.urlsplit(source).scheme)
+    if online and client is None:
+        from account_state import require_confirmed_account
+        try:
+            account = require_confirmed_account(cookie)
+        except Exception:
+            raise CollectionError('请先打开 configure 核实采集账号。') from None
+        if account['account_id'] != account_id:
+            raise CollectionError('采集账号与已确认的真实账号不一致。')
     if creator:
         if client is None:
             if not cookie:

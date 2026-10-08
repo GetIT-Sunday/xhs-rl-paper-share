@@ -12,14 +12,18 @@
 - `app/assets/covers/`：封面。
 - `data/`：快照、权重、报告、决策记录、发布账本和调度状态。
 - `cookie.json`：本地登录缓存。
+- `config.json`：确认的账号和凭证指纹，不包含 Cookie。
+- `configure-status.json`：本次配置会话状态，供 Agent 读取；包含昵称和账号 ID，属于私有数据。
 
 通过 `PAPER2XHS_HOME` 切换账号工作目录；`PAPER2XHS_DATA_DIR` 可单独指定数据目录。不要让多个账号共用这些目录。更新安装包只同步程序和配置示例，不清空运营数据。导入旧工程时由用户明确指定需要迁移的文件，不自动扫描其他账号。
 
-## 登录
+## 配置和登录
 
-`run login` 尝试现有 SDK 扫码登录并缓存 Cookie。接口可能变动；拿到二维码后让用户在小红书 App 完成操作，不假装登录成功。扫码不可用时在创作者中心完成登录并在本机配置 `XHS_COOKIE`；不要让用户把凭证发到聊天或提交 Git。`doctor` 的 cookie_configured 只表示存在配置，不能证明有效。
+优先运行 `python3 "<skill>/scripts/paper2xhs.py" configure`。它只监听 `127.0.0.1`，输出短时有效的一次性链接；页面用小红书 App 扫码，调用登录后的 self identity 接口显示真实昵称、账号 ID 和主页，再由用户显式确认。用户保存后，Agent 读取 `status_file`（核对本次 `session_id`，再运行 `doctor`）；没有 `configuration_complete=true` 就停止发布和在线采集。
 
-`run publish` 和 `run collect` 通过入口复用缓存。`XHS_ACCOUNT_ID` 必须由用户确认；存在登录凭证不自动证明该 ID 对应当前登录账号。缺少权限、验证挑战或签名错误时停止，保留已生成的成稿。
+Cookie、配置和状态只写入 `home` 私有目录并限制为当前用户可读；页面和日志不会返回 Cookie。二维码过期、平台错误、需要验证或账号切换时，给出页面提示并重新打开配置页。`run login` 仍作为底层兼容命令，但不会把“存在 Cookie”当成账号核实。不要让用户把凭证或验证码发到聊天或提交 Git。`doctor` 的 `cookie_configured` 只表示缓存存在，`account_confirmed` 和 `configuration_complete` 才表示通过了本机配置页；发布前还会对同一 Cookie 在线复核。
+
+`run publish` 和 `run collect` 通过入口复用缓存。入口会从已确认配置中提供 `XHS_ACCOUNT_ID`；手动覆盖的 ID 必须与真实登录账号一致。缺少权限、验证挑战或签名错误时停止，保留已生成的成稿。
 
 ## 反馈采集
 
@@ -40,7 +44,7 @@ SDK 是非官方适配器，下载安装不保证线上接口可用。当前没�
 
 ## 发布和周期运行
 
-`run publish -- --content-json <成稿绝对路径> --mark-published` 会向平台写入；用户明确授权时可附加 `--force` 非交互执行。`--private` 是平台私密发布，不是预览。MCP 模式要求用户已有服务，`--draft` 所需 Bridge 不随包提供。
+`run publish -- --content-json <成稿绝对路径> --mark-published` 会向平台写入；用户明确授权时可附加 `--force` 非交互执行。`--private` 是平台私密发布，不是预览。向导仅验证 API 登录态；Skill 暂停使用无法核实独立账号的 MCP/Bridge 发布模式。
 
 `run schedule` 是现有单次发布调度器：可能等待当天轮换时段，随后抓取、排序并发布一篇。不要为验证安装调用它。它没有常驻调度服务，也不自动调用当前 Agent 写中文；无人值守纯脚本产物仍是模板，成稿质量需另行接入模型或预先准备 Agent 成稿。
 

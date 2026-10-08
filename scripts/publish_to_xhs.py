@@ -64,24 +64,10 @@ def create_xhs_client(cookie_str):
     这里将 xhs.core.sign 替换为基于 xhshow 的实时签名，让创作者接口与普通接口
     共用同一套有效签名逻辑。
     """
-    if not _HAS_XHS:
-        print("❌ 缺少依赖，请安装：pip install xhs xhshow", file=sys.stderr)
-        sys.exit(1)
-    cookie = parse_cookie(cookie_str)
-    signer = Xhshow()
-
-    # 签名函数（用于普通 web 接口，is_creator=False）
-    def sign_func(url, data, a1=None, web_session=None):
-        return signer.sign_headers_post(
-            uri=url,
-            cookies=cookie,
-            payload=data if data else {},
-            x_rap=True,
-        )
-
-    _patch_creator_sign(signer, cookie)
-
-    return XhsClient(cookie=cookie_str, sign=sign_func)
+    from cookie_manager import _make_client
+    client = _make_client(cookie_str)
+    _patch_creator_sign(Xhshow(), parse_cookie(cookie_str))
+    return client
 
 
 def _patch_creator_sign(signer, cookie):
@@ -247,6 +233,15 @@ def _clean_markdown(text: str) -> str:
 
 def publish_note(client, content_data, cover_path, is_private=False, schedule_time=None):
     """发布笔记（话题为可点击的官方话题）"""
+    # Keep the guard in the upload function so scheduled/direct callers cannot bypass it.
+    from account_state import require_confirmed_account
+    try:
+        account = require_confirmed_account(client.cookie)
+    except Exception:
+        print("❌ 发布账号尚未确认、已变化或在线核验失败，请打开 configure 重新核对。")
+        return {"success": False, "error": "account_verification_required"}
+    content_data["account_id"] = account["account_id"]
+    print(f"发布账号：{account['nickname']}（{account['account_id']}）")
     title = content_data["xhs_title"]
     desc = content_data["xhs_content"]
 
@@ -439,21 +434,27 @@ def main():
         print("❌ --mcp 和 --draft 不能同时使用")
         sys.exit(1)
 
+    if os.environ.get("PAPER2XHS_HOME") and (args.mcp or args.draft):
+        print("❌ 当前配置向导验证的是 API 登录账号，尚不能核实 MCP/Bridge 的独立账号；Skill 暂不通过这两种方式发布。")
+        return 1
+
     # cookie 校验（默认 API 模式需要）
     if not args.mcp and not args.draft and not args.cookie:
         args.cookie = os.environ.get("XHS_COOKIE")
     if not args.mcp and not args.draft and not args.cookie:
-        # 尝试从 cookie_manager 自动获取
+        from account_state import current_cookie, home_path
+        args.cookie = current_cookie(Path(os.environ.get('XHS_COOKIE_CACHE', str(home_path() / 'cookie.json'))))
+    if not args.mcp and not args.draft:
+        if args.refresh_cookie or not args.cookie:
+            print("❌ 请先运行 configure，在页面中扫码并确认发布账号。")
+            return 1
+        from account_state import require_confirmed_account
         try:
-            sys.path.insert(0, str(Path(__file__).parent))
-            from cookie_manager import get_valid_cookie
-            args.cookie = get_valid_cookie(force_refresh=args.refresh_cookie)
-        except SystemExit:
-            raise
-        except Exception as e:
-            print(f"❌ 自动获取 Cookie 失败: {e}")
-            print("请手动提供 --cookie 参数")
-            sys.exit(1)
+            account = require_confirmed_account(args.cookie)
+            print(f"已核实发布账号：{account['nickname']}（{account['account_id']}）")
+        except Exception:
+            print("❌ 无法核实已确认的发布账号，请运行 configure。")
+            return 1
 
     # 创建客户端（仅默认 API 模式需要）
     client = create_xhs_client(args.cookie) if not args.mcp and not args.draft else None

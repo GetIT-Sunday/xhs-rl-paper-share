@@ -1,5 +1,8 @@
 """Test the distributable as a user would: extract elsewhere and invoke its CLI."""
 import json
+import signal
+import select
+from urllib.request import urlopen, Request
 import os
 from pathlib import Path
 import subprocess
@@ -78,6 +81,29 @@ class SkillPackageTests(unittest.TestCase):
         self.env['PAPER2XHS_HOME'] = str(self.skill / 'runtime')
         self.run_cli('setup', '--skip-deps', code=2)
         self.assertFalse((self.skill / 'runtime').exists())
+
+    def test_packaged_wizard_starts_and_exposes_only_authenticated_status(self):
+        proc = subprocess.Popen([sys.executable, str(self.skill / 'scripts/paper2xhs.py'), 'configure', '--ttl', '30'],
+                                cwd=self.root, env=self.env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, start_new_session=True)
+        try:
+            self.assertTrue(select.select([proc.stdout], [], [], 10)[0], 'Wizard did not report its URL')
+            handshake = json.loads(proc.stdout.readline())
+            origin, token = handshake['url'].split('/#token=')
+            req = Request(origin+'/api/status', headers={'X-Paper2XHS-Token': token})
+            with urlopen(req, timeout=5) as response:
+                state = json.load(response)
+            self.assertEqual(state['session_id'], handshake['session_id'])
+            self.assertFalse(state['configuration_complete'])
+            self.assertTrue((self.home/'app/scripts/configure.js').exists())
+            with urlopen(origin+'/configure.js', timeout=5) as response:
+                self.assertIn(b'X-Paper2XHS-Token', response.read())
+            duplicate = self.run_cli('configure', '--ttl', '30', code=2)
+            self.assertIn('配置页已在运行', duplicate.stderr)
+            self.assertFalse((self.skill/'config.json').exists())
+        finally:
+            os.killpg(proc.pid, signal.SIGTERM)
+            proc.communicate(timeout=10)
 
     def test_empty_prepare_does_not_publish(self):
         self.run_cli('setup', '--skip-deps')

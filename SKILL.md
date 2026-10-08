@@ -11,10 +11,18 @@ description: 将 arXiv 强化学习、具身智能和机器人学习论文制作
 
 先执行 `python3 "<skill>/scripts/paper2xhs.py" doctor`。读取返回的 `home`、`app`、`data` 和 `python` 路径；后续所有输入输出用绝对路径。若 `python_supported=false`，寻找已安装的 Python 3.10+（如 `python3.12`）运行入口；没有可用版本时先说明需安装 Python。
 
+当用户要配置账号，或要发布/在线采集且 `configuration_complete=false` 时：
+
+1. 缺依赖先执行 `setup`，然后运行 `python3 "<skill>/scripts/paper2xhs.py" configure`。保留这个长时间运行的进程，读取首行 JSON，不等命令退出。
+2. 用宿主的浏览器工具打开返回的 `url`（保留 `#token`）。支持内置浏览器时在对话旁展示；否则给用户本机链接。Skill 本身不能向任意宿主注入原生弹窗。远程 Agent 的 localhost 不等于用户电脑，需要本地运行或宿主提供端口转发。
+3. 用户在页面扫码、核对真实昵称及账号 ID，并点击“确认账号并返回对话”。不要让用户把 Cookie 或验证码发到对话。等待期间可以整理论文；读取 `status_file`，必须匹配本次 `session_id`，且 `configuration_complete=true`，再执行 `doctor` 确认当前凭证仍匹配。
+4. 配置不代表发布授权。完成后继续用户原来的任务；纯草稿、离线反馈不要求登录。页面默认 15 分钟有效，已运行时复用当前页，不同时启动多个向导。
+
+
 - 需要 Python 3.10+、macOS/Linux（Windows 使用 WSL）。脚本自带选题、反馈和生成骨架逻辑，无需另配 LLM API；中文成稿由当前 Agent 根据证据写作。
 - 执行 `python3 "<skill>/scripts/paper2xhs.py" setup` 在独立目录准备虚拟环境和依赖。仅离线导入/反馈或生成骨架时可用 `setup --skip-deps`，它不联网安装第三方包。
 - 默认运行目录为 `~/.local/share/paper2xhs`，可用 `PAPER2XHS_HOME` 指定。不同账号使用不同目录。数据、凭证和草稿不写入 Skill。
-- 只有发布和在线指标采集需要小红书登录；先生成内容不必登录。读 [references/skill-operations.md](references/skill-operations.md) 处理登录、采集和调度。
+- 只有发布和在线指标采集需要小红书登录；先生成内容不必登录。登录凭证只保存在 `home` 私有目录，账号核对绑定当前凭证且发布前会再次在线核实。读 [references/skill-operations.md](references/skill-operations.md) 处理配置、采集和调度。
 
 ## 根据用户意图执行
 
@@ -29,7 +37,7 @@ description: 将 arXiv 强化学习、具身智能和机器人学习论文制作
 | 检查文案证据 | `evidence --content <JSON> --evidence <JSON>` | 数字和术语检查结果 |
 | 导入反馈并更新权重 | `collect --source <CSV/JSON> --account-id <账号> --scope lifetime` | `<data>/metrics_snapshots.jsonl`、策略权重 |
 | 反馈报告 | `feedback report` | `<data>/feedback_report.md` |
-| 发布指定成稿 | `publish --content-json <JSON> --mark-published` | 本地发布记录；需要登录和发布授权 |
+| 发布指定成稿 | `publish --content-json <JSON> --mark-published` | 本地发布记录；需要配置页核实账号和发布授权 |
 
 ### 选题和写作
 
@@ -40,9 +48,11 @@ description: 将 arXiv 强化学习、具身智能和机器人学习论文制作
 
 ### 发布和反馈
 
+发布命令不会自动替你扫码或猜测账号。配置页完成后，发布前仍展示账号、标题、正文和封面；身份核验失败或账号发生变化时停止。
+
 安装 Skill、要求生成或“预览”均不等于授权公开发布。用户明确要求发布时，在其已授权范围内执行，不重复索取确认；脚本的 `--force` 只用于已有明确授权的非交互执行。`--private` 也会在平台创建笔记，不是本地预览。
 
-发布前核对成稿和发布账号。超时或结果不明时停止重试，先到账号确认是否已经创建，避免重复发布。MCP 若未返回笔记 ID，不猜测 ID、不按标题自动归因。`--draft` 依赖未随包提供的浏览器 Bridge，不作为默认功能；MCP 服务需用户另行安装。
+发布前核对成稿和发布账号。超时或结果不明时停止重试，先到账号确认是否已经创建，避免重复发布。配置向导只核实 API 登录账号；Skill 暂不通过拥有独立登录态的 `--mcp`/`--draft` 发布，不能把 API 账号核实结果套用到其他客户端。
 
 在线反馈接口及字段映射尚需实号验证；不能声称安装后已自动接通。只有确认是逐笔累计口径才用 `lifetime`；曝光不等于阅读量，账号净涨粉不等于单篇涨粉。每篇笔记只取发布后 24–30 小时的一次有效观测，缺失曝光/策略标签时不学习。权重是观察相关性，不证明因果提升。
 

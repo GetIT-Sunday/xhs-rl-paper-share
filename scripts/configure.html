@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Paper2XHS · 账号配置</title><link rel="stylesheet" href="/configure.css"><script src="/configure.js" defer></script></head>
+<body><header><a href="/" aria-label="Paper2XHS 首页">Paper<span>2</span>XHS</a><span>本机配置</span></header>
+<main><h1>配置你的科研账号</h1><p class="intro">完成登录与账号核对，回到对话即可继续创作。</p>
+<ol class="steps" aria-label="配置进度"><li id="step-env"><b>01</b> 环境检查</li><li id="step-login"><b>02</b> 登录小红书</li><li id="step-account"><b>03</b> 确认账号</li></ol>
+<div class="layout"><section class="login"><h2 id="section-title">登录小红书</h2><p id="instruction">使用小红书 App 扫码，并在手机上确认登录。</p>
+<div id="qr-area"><div id="qr-placeholder"><svg width="42" height="42" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 14V4h10M26 4h10v10M36 26v10H26M14 36H4V26M10 20h20"/></svg><span>点击下方按钮生成二维码</span></div><img id="qr" alt="使用小红书 App 扫描此登录二维码" hidden></div>
+<div id="account" hidden><img id="avatar" alt="登录账号头像" hidden><div><h3 id="nickname"></h3><p id="account-id"></p><a id="profile" target="_blank" rel="noreferrer noopener">查看账号主页</a></div></div>
+<div class="actions"><button id="login" type="button">生成登录二维码</button><button id="verify" class="secondary" type="button" disabled>检查已有登录</button></div>
+<p id="message" role="status" aria-live="polite">正在检查本机环境…</p><p id="countdown" class="small"></p></section>
+<aside><h2>运行状态</h2><dl><div><dt>Python 环境</dt><dd id="python">检查中</dd></div><div><dt>运行依赖</dt><dd id="dependencies">检查中</dd></div><div><dt>登录状态</dt><dd id="login-status">未登录</dd></div><div><dt>发布账号</dt><dd id="account-status">待核对</dd></div><div><dt>在线指标</dt><dd id="metrics">未验证</dd></div></dl><p id="missing" class="small"></p>
+<div class="privacy"><h2>数据保存在本机</h2><p>登录凭证不会发送到对话或写入项目仓库。</p><p class="small">运行目录</p><code id="home">正在读取…</code><p class="small">在线指标采集需要另行核对平台字段，不影响先生成内容。</p></div></aside></div>
+<footer><div><strong id="footer-title">确认真实账号后即可完成</strong><p id="footer-note">保存配置不会发布内容，也不会开启定时任务。</p></div><button id="confirm" type="button" disabled>确认账号并返回对话</button></footer>
+<p class="footnote">登录、验证码与手机授权均由你在小红书官方界面完成。配置页将在 15 分钟后关闭。</p></main></body></html>

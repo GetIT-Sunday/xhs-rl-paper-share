@@ -36,6 +36,11 @@ Skill 会引导准备环境、选择论文、整理 Evidence Pack，再由当前
 
 **环境要求：**Python 3.10+、macOS/Linux 或 Windows WSL，以及支持 Skills 的 Agent。安装依赖和获取论文需要网络；GitHub 安装指令要求远端仓库已包含 Skill 文件。
 
+
+需要登录时，Agent 会打开本机配置页：**环境检查 → 小红书 App 扫码 → 核对真实昵称与账号 ID → 保存并回到对话**。登录凭证和账号配置只保存在本机私有目录。支持内置浏览器的 Agent 可在对话旁展示页面，其他宿主使用本机浏览器；远程运行需端口转发。生成草稿无需登录，在线指标字段仍需实号核对。
+
+也可以说：`使用 $paper2xhs，打开账号配置向导。`
+
 <details>
 <summary><strong>手动安装到 Codex</strong></summary>
 
@@ -102,6 +107,7 @@ git clone https://github.com/GetIT-Sunday/xhs-rl-paper-share.git
 cd xhs-rl-paper-share
 python3 scripts/paper2xhs.py doctor
 python3 scripts/paper2xhs.py setup
+python3 scripts/paper2xhs.py configure
 python3 scripts/paper2xhs.py run fetch -- --count 5 --days 7
 python3 scripts/paper2xhs.py prepare
 ```

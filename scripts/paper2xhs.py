@@ -11,6 +11,8 @@ import subprocess
 import sys
 import venv
 
+from account_state import configuration_status, current_cookie, read_json
+
 SKILL = Path(__file__).resolve().parents[1]
 COMMANDS = {
     'fetch': 'fetch_papers.py', 'generate': 'generate_content.py',
@@ -21,6 +23,7 @@ COMMANDS = {
 }
 RUNTIME_SCRIPTS = sorted(set(COMMANDS.values()) | {
     'paper_pipeline.py', 'publication_store.py', 'compose_cover.py', 'xhs_mcp_client.py',
+    'account_state.py', 'configure.py', 'configure.html', 'configure.css', 'configure.js',
 })
 MODULES = {'xhs': 'xhs', 'xhshow': 'xhshow', 'PyMuPDF': 'fitz', 'Pillow': 'PIL',
            'requests': 'requests', 'arxiv': 'arxiv', 'qrcode': 'qrcode'}
@@ -56,14 +59,18 @@ def sync_runtime(p):
 
 def environment(p):
     env = dict(os.environ)
+    env['PAPER2XHS_HOME'] = str(p['home'])
     env['PAPER2XHS_DATA_DIR'] = str(p['data'])
     env['XHS_COOKIE_CACHE'] = str(p['cookie_cache'])
     env['PYTHONDONTWRITEBYTECODE'] = '1'
     # Reuse locally provided/login-cached credentials without printing them.
     if not env.get('XHS_COOKIE') and p['cookie_cache'].exists():
-        cookie = json.loads(p['cookie_cache'].read_text()).get('cookie')
+        cookie = read_json(p['cookie_cache']).get('cookie')
         if cookie:
             env['XHS_COOKIE'] = cookie
+    status = configuration_status(p['home'], env.get('XHS_COOKIE', ''))
+    if status['configuration_complete'] and not env.get('XHS_ACCOUNT_ID'):
+        env['XHS_ACCOUNT_ID'] = status['account_id']
     return env
 
 
@@ -74,14 +81,16 @@ def doctor(p):
             'for p,m in ' + repr(MODULES) + '.items()}))')
     probe = subprocess.run([str(executable), '-c', code], capture_output=True, text=True)
     dependencies = json.loads(probe.stdout) if probe.returncode == 0 else {}
-    return {**{k: str(v) for k, v in p.items()}, 'skill': str(SKILL),
+    status = configuration_status(p['home'], current_cookie(p['cookie_cache']))
+    status['configuration_complete'] = bool(status['configuration_complete'] and all(dependencies.values()) and dependencies)
+    return {**status, **{k: str(v) for k, v in p.items()}, 'skill': str(SKILL),
             'supported_platform': os.name == 'posix', 'python_supported': sys.version_info >= (3, 10),
             'venv_ready': p['python'].exists(), 'dependencies': dependencies,
             'cookie_configured': bool(os.environ.get('XHS_COOKIE') or p['cookie_cache'].exists()),
-            'account_configured': bool(os.environ.get('XHS_ACCOUNT_ID')),
+            'account_configured': bool(status['account_confirmed']),
             'metrics_mapping_configured': bool(os.environ.get('XHS_METRICS_CONFIG')),
             'live_metrics_verified': False,
-            'note': 'Local configuration checks only; no platform login or API was verified.'}
+            'note': 'Local checks; verification is cached for up to 24h and bound to the credential. Publishing rechecks the actual account online.'}
 
 
 def main():
@@ -90,6 +99,8 @@ def main():
     sub.add_parser('doctor', help='Report local readiness without credentials or network calls')
     setup = sub.add_parser('setup', help='Prepare private runtime and install dependencies')
     setup.add_argument('--skip-deps', action='store_true', help='Skip venv and pip; stdlib workflows only')
+    configure = sub.add_parser('configure', help='Open a local login/account wizard; never publish')
+    configure.add_argument('--ttl', type=int, default=900)
     sub.add_parser('prepare', help='Select and prepare from cached candidates; never publish')
     run = sub.add_parser('run', help='Run one function in the private workspace')
     run.add_argument('command', choices=sorted(COMMANDS))
@@ -112,6 +123,13 @@ def main():
             return 0
         python = str(p['python']) if p['python'].exists() else sys.executable
         env = environment(p)
+        if args.mode == 'configure':
+            # Do not promote cache credentials to XHS_COOKIE: QR account switching
+            # must remain possible and future commands must read the new cache.
+            if not os.environ.get('XHS_COOKIE'):
+                env.pop('XHS_COOKIE', None)
+            return subprocess.call([python, str(p['app'] / 'scripts/configure.py'), '--ttl', str(args.ttl)],
+                                   cwd=p['app'], env=env)
         if args.mode == 'prepare':
             code = ('from scheduled_publish import prepare_next_content; '
                     'p=prepare_next_content(); print(str(p) if p else "No cached candidates; run fetch first"); '
