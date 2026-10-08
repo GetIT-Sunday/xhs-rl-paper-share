@@ -8,13 +8,12 @@
 
 An Agent Skill for researchers and science creators working on reinforcement learning, embodied AI, and robot learning.
 
-[English](README.md) · [简体中文](README_ZH.md)
 
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square)
 ![Agent Skill](https://img.shields.io/badge/Agent-Skill-0066cc?style=flat-square)
 [![GitHub stars](https://img.shields.io/github/stars/GetIT-Sunday/xhs-rl-paper-share?style=flat-square)](https://github.com/GetIT-Sunday/xhs-rl-paper-share)
 
-[Quick start](#quick-start) · [What you can do](#what-you-can-do) · [Feedback](#feedback-that-informs-decisions) · [Documentation](#documentation)
+[Quick start](#quick-start) · [Account setup](#account-setup-and-publishing) · [What you can do](#what-you-can-do) · [Feedback](#feedback-that-informs-decisions) · [Documentation](#documentation)
 
 </div>
 
@@ -26,20 +25,15 @@ Send this to an Agent with GitHub Skill installation support:
 Help me install Paper2XHS from https://github.com/GetIT-Sunday/xhs-rl-paper-share with Skills. Install the repository root as the paper2xhs skill.
 ```
 
-Open a new session or refresh Skills, then ask:
+Open a new session or refresh Skills, then create a draft you can review:
 
 ```text
 Use $paper2xhs to choose a recent robot-learning paper, write an evidence-grounded Chinese Xiaohongshu draft, and create a paper-page cover. Show me the result without publishing.
 ```
 
-The Skill guides environment setup, selects a paper, prepares an Evidence Pack, and uses your Agent to write the Chinese draft. **Drafting needs no Xiaohongshu login or separate LLM API key.** Publishing and live metrics collection need your own account and configuration.
+You get **a paper selection, an Evidence Pack, a Chinese draft, and a PDF first-page cover**. Your Agent writes the post; the scripts handle retrieval, evidence preparation, and files. Drafting needs no Xiaohongshu login or separate LLM API key.
 
-**Requirements:** Python 3.10+, macOS/Linux or Windows WSL, and a Skill-capable Agent. Dependency installation and paper retrieval need network access. The GitHub installation prompt requires the Skill files to be available in the remote repository.
-
-
-When login is needed, the Agent opens a local setup page: **check the environment → scan with the Xiaohongshu app → verify the actual nickname and account ID → save and return to chat**. Credentials and account settings stay in your private local workspace. Agents with an embedded browser can show it beside the conversation; other hosts use a local browser. Remote execution requires port forwarding. Drafting needs no login; live metrics mappings still need verification against your account.
-
-You can also ask: `Use $paper2xhs to open the account setup wizard.`
+**Requirements:** Python 3.10+, macOS/Linux or Windows WSL, and a Skill-capable Agent that can run local scripts. Dependency installation and paper retrieval need network access; account setup needs a browser.
 
 <details>
 <summary><strong>Install manually in Codex</strong></summary>
@@ -53,13 +47,41 @@ If that directory already exists, update or back it up first. Alternatively, ext
 
 </details>
 
+## Account setup and publishing
+
+When you are ready to publish, ask your Agent:
+
+```text
+Use $paper2xhs to open the account setup wizard. After login and account verification, show the draft and cover, then continue according to my publishing instructions.
+```
+
+| Step | Your action | What Paper2XHS does |
+|---|---|---|
+| 1. Check the environment | Open the local setup page provided by the Agent | Check dependencies and cached login; display readiness |
+| 2. Sign in | Scan with the Xiaohongshu app and confirm on your phone | Read the authenticated account identity from the platform |
+| 3. Confirm the account | Check the nickname, account ID, and profile; confirm | Save private local configuration and return status to the Agent |
+| 4. Publish the draft | Review the account, title, text, and cover; specify your publishing intent | Recheck the account online before publishing and record the platform response |
+
+The page supports checking an existing login and switching accounts. It listens only on localhost and closes after 15 minutes by default. Cookies stay out of chat, logs, and the Skill package. **Saving configuration does not publish a post or start scheduled tasks.**
+
+An embedded browser can show the page beside the conversation; other hosts use a local browser. This is a local webpage launched by the Skill. Remote Agents need a local runtime or port forwarding. Live metrics still require a verified field mapping.
+
+
+### The setup page beside your Agent
+
+When the Skill finds that no account is configured, the Agent opens this local page beside the conversation. You scan, verify the account, and confirm there before returning to the conversation; the QR area and account details in this screenshot are redacted.
+
+<img src="assets/setup-wizard.png" alt="Paper2XHS local account setup page opened beside the Agent conversation; QR and account details redacted" width="100%">
+
+*UI example: the page runs locally; saving configuration does not publish a post.*
+
 ## What you can do
 
 | Capability | What Paper2XHS provides |
 |---|---|
 | **Find a topic** | Retrieve arXiv candidates, deduplicate publication history, and rank papers using relevance, freshness, available evidence, and applicable strategy weights. |
 | **Write from evidence** | Keep source links, abstract passages, numbers, and terms in an Evidence Pack; let the host Agent turn them into a Chinese draft. |
-| **Prepare and publish** | Extract a PDF first-page cover, resolve topic tags, and publish through the configured Xiaohongshu adapter when requested. |
+| **Configure and publish** | Sign in locally and verify the actual account; prepare a PDF cover and topic tags, then publish when requested. |
 | **Learn from feedback** | Import metrics or use the configurable creator-center adapter, store timestamped snapshots, and update expression-strategy weights. |
 | **Keep an audit trail** | Record the selected strategy and policy version; keep credentials, drafts, publication history, and metrics on your own machine. |
 
@@ -107,12 +129,19 @@ git clone https://github.com/GetIT-Sunday/xhs-rl-paper-share.git
 cd xhs-rl-paper-share
 python3 scripts/paper2xhs.py doctor
 python3 scripts/paper2xhs.py setup
-python3 scripts/paper2xhs.py configure
 python3 scripts/paper2xhs.py run fetch -- --count 5 --days 7
 python3 scripts/paper2xhs.py prepare
 ```
 
 `prepare` selects from available candidates and prints a draft path; it does not publish. `--count` controls retrieval per search keyword, not the final number of papers. If `python3` is older than 3.10, use an installed newer interpreter such as `python3.12`.
+
+When login is needed, start the setup page in a separate terminal:
+
+```bash
+python3 scripts/paper2xhs.py configure
+```
+
+Open the `url` from the first JSON line and keep that terminal running. After confirming the account on the page, run `doctor` in another terminal to check `configuration_complete`. Skip this step for drafting alone. Publishing commands and metrics setup are in the [operations guide](references/skill-operations.md).
 
 The default private workspace is `~/.local/share/paper2xhs/`:
 
@@ -122,6 +151,8 @@ The default private workspace is `~/.local/share/paper2xhs/`:
 | `app/assets/covers/` | Generated paper-page covers |
 | `data/` | Metrics snapshots, policy weights, reports, decisions, and publication records |
 | `cookie.json` | Local login cache, when configured |
+| `config.json` | Confirmed account and credential fingerprint |
+| `configure-status.json` | Setup-session status for the Agent to resume your task |
 
 Set `PAPER2XHS_HOME` to change the workspace; use a separate workspace for each account. `doctor` reports the resolved paths without displaying credentials. Updating the Skill refreshes program files while retaining private data.
 
@@ -146,8 +177,31 @@ To import your own export, ask the Agent to use its absolute file path. Start wi
 | Online platform access | Uses an unofficial adapter. Login, signature compatibility, and current metric fields need verification on the user's account. |
 | Publishing | Installation and local previews do not publish. `--private` creates a real private post on the platform. |
 | Scheduling | `run schedule` may wait for a time slot and then publish one note. It is not an installed recurring service. |
-| Optional integrations | MCP requires a separately running service. The legacy browser Bridge used by `--draft` is not bundled. |
+| Optional integrations | The Skill currently blocks MCP/Bridge publishing: their separate login sessions cannot reuse this wizard’s account verification. |
 | Advanced covers | Paper-page covers are included; model-generated covers require separately configured image capabilities. |
+
+## FAQ
+
+<details>
+<summary><strong>The QR code expired or the setup page will not open.</strong></summary>
+
+Generate a new QR code on the page. The setup service exits after 15 minutes by default; ask the Agent to reopen it when the link expires. With a remote Agent, your browser must be able to reach its local service. Do not expose the setup port publicly.
+
+</details>
+
+<details>
+<summary><strong>I scanned the code. Why is publishing still blocked?</strong></summary>
+
+The platform must return the authenticated account, and you must confirm it on the page. Verification challenges, signature errors, or an account change stop the check. Keep the draft and complete any required verification in Xiaohongshu before retrying. Setup completion does not prove every publishing or metrics endpoint works.
+
+</details>
+
+<details>
+<summary><strong>Do I need to edit code when arXiv retrieval fails?</strong></summary>
+
+Retrieval retries transient request failures. If it still fails, it reports the error and preserves cached candidates. Retry later, or ask the Agent to work from a specific paper and accessible source material.
+
+</details>
 
 ## Documentation
 
@@ -159,7 +213,22 @@ To import your own export, ask the Agent to use its absolute file path. Start wi
 | [Metrics mapping example](examples/creator_metrics.config.example.json) | Starting a configuration after checking the real schema |
 | [Tests](tests/) | Snapshot, policy, publication metadata, and isolated Skill-package checks |
 
-The content and operations guides are currently written in Chinese. The launcher is [scripts/paper2xhs.py](scripts/paper2xhs.py); core workflow modules are under [scripts/](scripts/).
+The content and operations guides are currently written in Chinese.
+
+Project structure:
+
+```text
+SKILL.md                     Agent tasks and execution rules
+scripts/paper2xhs.py          Unified entrypoint and private runtime
+scripts/configure.*          Local account setup page
+scripts/account_state.py     Account confirmation and pre-publish verification
+scripts/                     Retrieval, evidence, covers, publishing, feedback
+references/                  Writing and operations guides
+examples/                    Sanitized metrics-mapping examples
+tests/                       Isolated install, account boundaries, feedback
+```
+
+Real account data stays in the private workspace and is not part of this distribution structure.
 
 ## Contributing
 
