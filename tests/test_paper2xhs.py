@@ -2,6 +2,10 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch, MagicMock
+from urllib.error import HTTPError
+from contextlib import redirect_stdout, redirect_stderr
+import io
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -11,6 +15,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import collect_metrics
 import feedback
 import publication_store
+import fetch_papers
 from generate_content import generate_content
 from paper_pipeline import rank_papers
 
@@ -121,6 +126,38 @@ class CollectorTests(unittest.TestCase):
                                              config=config, scope="lifetime", snapshots=Path(d) / "m.jsonl", weights=Path(d) / "w.json")
             self.assertEqual(result["inserted"], 1)
             self.assertEqual(result["eligible_notes"], 1)
+
+
+class FetchPaperTests(unittest.TestCase):
+    def test_arxiv_query_uses_valid_current_date_range(self):
+        now = datetime(2026, 10, 8, 15, 4, 5, tzinfo=timezone.utc)
+        query = fetch_papers.build_search_query("robot learning", days=14, now=now)
+        self.assertIn("submittedDate:[202609240000 TO 202610081504]", query)
+        self.assertNotIn("999999999999", query)
+
+    def test_transient_error_retries_then_returns_valid_empty_feed(self):
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b'<feed xmlns="http://www.w3.org/2005/Atom"/>'
+        with patch.object(fetch_papers.urllib.request, 'urlopen', side_effect=[HTTPError('u',503,'unavailable',{},None), response]) as request, patch.object(fetch_papers.time, 'sleep'), redirect_stdout(io.StringIO()):
+            self.assertEqual(fetch_papers.fetch_arxiv_papers('robot learning'), [])
+            self.assertEqual(request.call_count, 2)
+
+    def test_failures_preserve_cache_and_return_failure(self):
+        for outcomes in ([RuntimeError('HTTP 500'), RuntimeError('HTTP 500')], [[], RuntimeError('HTTP 500')]):
+            with self.subTest(outcomes=outcomes), tempfile.TemporaryDirectory() as d:
+                output = Path(d) / 'fetched.json'
+                original = b'{"papers":[{"arxiv_id":"cached-paper"}]}'
+                output.write_bytes(original)
+                with patch.object(sys, 'argv', ['fetch', '--output', str(output)]), patch.object(fetch_papers, 'RL_KEYWORDS', ['one','two']), patch.object(fetch_papers, 'fetch_arxiv_papers', side_effect=outcomes), patch.object(fetch_papers, 'load_published_ids', return_value=set()), patch.object(fetch_papers.time, 'sleep'), redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                    self.assertEqual(fetch_papers.main(), 2)
+                self.assertEqual(output.read_bytes(), original)
+
+    def test_http_200_error_or_invalid_xml_is_not_empty_success(self):
+        for body in (b'<html>Service unavailable</html>', b'<broken', b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>http://arxiv.org/api/errors#bad-query</id></entry></feed>'):
+            response = MagicMock()
+            response.__enter__.return_value.read.return_value = body
+            with patch.object(fetch_papers.urllib.request, 'urlopen', return_value=response), redirect_stdout(io.StringIO()), self.assertRaises(RuntimeError):
+                fetch_papers.fetch_arxiv_papers('robot learning')
 
 
 class PublicationLedgerTests(unittest.TestCase):

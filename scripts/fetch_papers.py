@@ -4,22 +4,24 @@
 
 用法：
   python3 fetch_papers.py --count 5
-  python3 fetch_papers.py --category cs.LG --count 10
+  python3 fetch_papers.py --days 14 --count 10
 """
 
 import argparse
 import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import urllib.request
 import urllib.parse
+import urllib.error
 import time
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 from paper_pipeline import load_strategy_policy, rank_papers, strategy_weights_path
 from publication_store import load_published, paper_id
+from feedback import atomic_text
 
 # RL 相关搜索关键词
 RL_KEYWORDS = [
@@ -42,15 +44,23 @@ def load_published_ids():
     return {paper_id(item.get("arxiv_id")) for item in load_published()["published"]}
 
 
-def fetch_arxiv_papers(query, max_results=10, days=7):
+def build_search_query(query, days=7, now=None):
+    """Use real UTC dates in arXiv's YYYYMMDDHHMM range."""
+    if days <= 0:
+        raise ValueError("days must be positive")
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    start = now - timedelta(days=days)
+    start_date = start.strftime("%Y%m%d0000")
+    end_date = now.strftime("%Y%m%d%H%M")
+    return f'all:"{query}" AND submittedDate:[{start_date} TO {end_date}]'
+
+
+def fetch_arxiv_papers(query, max_results=10, days=7, retries=2):
     """从 arXiv API 抓取论文"""
-    # 计算7天前的日期
-    start_date = (datetime.now() - timedelta(days=days)).strftime("%Y%m%d")
-    
     # 构建 arXiv API URL
     base_url = "https://export.arxiv.org/api/query?"
     params = {
-        "search_query": f'all:"{query}" AND submittedDate:[{start_date}0000 TO 999999999999]',
+        "search_query": build_search_query(query, days=days),
         "start": 0,
         "max_results": max_results,
         "sortBy": "submittedDate",
@@ -61,20 +71,42 @@ def fetch_arxiv_papers(query, max_results=10, days=7):
     print(f"🔍 搜索 arXiv: {query}")
     print(f"   URL: {url[:100]}...")
     
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            xml_data = resp.read().decode("utf-8")
-    except Exception as e:
-        print(f"❌ 请求失败: {e}")
-        return []
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "Paper2XHS/0.1 (arXiv reader)"}
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                xml_data = resp.read().decode("utf-8")
+            break
+        except (OSError, UnicodeError) as exc:
+            last_error = exc
+            if isinstance(exc, urllib.error.HTTPError) and exc.code not in (429, 500, 502, 503, 504):
+                raise RuntimeError(f"arXiv HTTP {exc.code}") from exc
+            if attempt < retries:
+                wait = 3 * (2 ** attempt)
+                print(f"⚠️ 请求失败，{wait} 秒后重试 ({attempt + 1}/{retries})")
+                time.sleep(wait)
+    else:
+        raise RuntimeError(f"arXiv 请求失败（已重试 {retries} 次）: {last_error}") from last_error
     
     # 解析 XML
-    root = ET.fromstring(xml_data)
+    try:
+        root = ET.fromstring(xml_data)
+    except ET.ParseError as exc:
+        raise RuntimeError("arXiv 返回无效 XML") from exc
+    if root.tag != "{http://www.w3.org/2005/Atom}feed":
+        raise RuntimeError("arXiv 返回非 Atom 数据")
     ns = {"atom": "http://www.w3.org/2005/Atom"}
     
     papers = []
     for entry in root.findall("atom:entry", ns):
+        if entry.findtext("atom:id", default="", namespaces=ns).startswith("http://arxiv.org/api/errors"):
+            raise RuntimeError("arXiv 返回查询错误")
+        if not all(entry.findtext("atom:" + field, default="", namespaces=ns).strip()
+                   for field in ("title", "summary", "id", "published")):
+            raise RuntimeError("arXiv 返回不完整论文数据")
         title = entry.find("atom:title", ns).text.strip().replace("\n", " ")
         summary = entry.find("atom:summary", ns).text.strip().replace("\n", " ")
         arxiv_id = entry.find("atom:id", ns).text.split("/")[-1]
@@ -107,21 +139,36 @@ def main():
     parser.add_argument("--days", type=int, default=7, help="搜索最近N天的论文")
     parser.add_argument("--output", default=None, help="输出文件路径")
     args = parser.parse_args()
+    if args.count <= 0 or args.days <= 0:
+        parser.error("--count 和 --days 必须为正整数")
     
     published_ids = load_published_ids()
     print(f"📋 已发布论文: {len(published_ids)} 篇")
     
     all_papers = []
     seen_ids = set()
+    successful_queries = 0
+    failures = []
     
     for keyword in RL_KEYWORDS:
-        papers = fetch_arxiv_papers(keyword, max_results=args.count, days=args.days)
+        try:
+            papers = fetch_arxiv_papers(keyword, max_results=args.count, days=args.days)
+            successful_queries += 1
+        except RuntimeError as exc:
+            failures.append(f"{keyword}: {exc}")
+            print(f"❌ {exc}")
+            papers = []
         for paper in papers:
             if paper_id(paper["arxiv_id"]) not in seen_ids and paper_id(paper["arxiv_id"]) not in published_ids:
                 all_papers.append(paper)
                 seen_ids.add(paper_id(paper["arxiv_id"]))
         time.sleep(3)  # 避免请求过快
     
+    if failures:
+        print(f"\n❌ {len(failures)} 项查询失败，{successful_queries} 项成功；结果不完整，已有候选文件保持不变。", file=sys.stderr)
+        print("   可以稍后重试；已有候选仍可使用。", file=sys.stderr)
+        return 2
+
     # 去重并按日期排序
     # Rank by relevance, freshness, evidence availability and novelty.  The
     # component scores are persisted with each candidate for auditability.
@@ -135,8 +182,8 @@ def main():
     # 输出结果
     output_path = args.output or str(Path(__file__).parent.parent / "references" / "fetched_papers.json")
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        json.dump({"fetched_at": datetime.now().isoformat(), "ranking": "paper_pipeline.score_paper", "policy_version": policy["version"], "papers": all_papers}, f, ensure_ascii=False, indent=2)
+    payload = {"fetched_at": datetime.now(timezone.utc).isoformat(), "ranking": "paper_pipeline.score_paper", "policy_version": policy["version"], "papers": all_papers}
+    atomic_text(output_path, json.dumps(payload, ensure_ascii=False, indent=2))
     
     print(f"💾 已保存到: {output_path}")
     
@@ -151,4 +198,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
