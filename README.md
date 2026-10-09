@@ -8,6 +8,8 @@
 
 An Agent Skill for researchers and science creators working on reinforcement learning, embodied AI, and robot learning.
 
+[简体中文](README_ZH.md)
+
 
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square)
 ![Agent Skill](https://img.shields.io/badge/Agent-Skill-0066cc?style=flat-square)
