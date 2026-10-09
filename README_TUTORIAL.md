@@ -4,6 +4,12 @@
 
 Paper2XHS 适合强化学习、具身智能和机器人学习方向的科研内容创作。论文检索和证据整理由 Skill 脚本完成，最终中文文案由 Agent 根据 Evidence Pack 撰写。
 
+## 极简版
+直接在Codex等Agent中发送：
+```text
+帮我配置https://github.com/GetIT-Sunday/xhs-rl-paper-share/edit/main/README_TUTORIAL.md sills 找一篇强化学习相关论文并发布。
+```
+
 ## 1. 安装 Skill
 
 在支持 Skills 的 Agent 对话中直接发送：
