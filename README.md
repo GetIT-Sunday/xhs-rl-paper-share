@@ -207,6 +207,7 @@ Retrieval retries transient request failures. If it still fails, it reports the 
 
 | Read this | For |
 |---|---|
+| [Step-by-step tutorial](README_TUTORIAL.md) | A first run from installing the Skill to publishing one paper note |
 | [Skill instructions](SKILL.md) | Agent entrypoint, supported tasks, and execution boundaries |
 | [Content guide](references/skill-content.md) | Evidence, Chinese writing, and strategy attribution |
 | [Operations guide](references/skill-operations.md) | Login, metrics mapping, private storage, and scheduling |

@@ -66,6 +66,10 @@ def create_xhs_client(cookie_str):
     """
     from cookie_manager import _make_client
     client = _make_client(cookie_str)
+    # xhs normalizes one cookie value while constructing the client. Keep the
+    # exact credential used for account binding so the pre-upload identity
+    # check does not reject an otherwise valid session.
+    client._paper2xhs_raw_cookie = cookie_str
     _patch_creator_sign(Xhshow(), parse_cookie(cookie_str))
     return client
 
@@ -236,7 +240,9 @@ def publish_note(client, content_data, cover_path, is_private=False, schedule_ti
     # Keep the guard in the upload function so scheduled/direct callers cannot bypass it.
     from account_state import require_confirmed_account
     try:
-        account = require_confirmed_account(client.cookie)
+        account = require_confirmed_account(
+            getattr(client, "_paper2xhs_raw_cookie", client.cookie)
+        )
     except Exception:
         print("❌ 发布账号尚未确认、已变化或在线核验失败，请打开 configure 重新核对。")
         return {"success": False, "error": "account_verification_required"}
@@ -300,7 +306,11 @@ def publish_note(client, content_data, cover_path, is_private=False, schedule_ti
         )
 
         # 提取笔记 ID
+        # xhs may unwrap the response body; recent creator responses return
+        # the note identifier at the top level.
         note_id = result.get("data", {}).get("id", "")
+        if not note_id:
+            note_id = result.get("id", "")
         share_link = result.get("share_link", "")
 
         print(f"\n✅ 发布成功!")
